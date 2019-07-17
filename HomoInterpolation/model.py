@@ -2,9 +2,9 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
-class discriminator(nn.Module):
+class Discriminator(nn.Module):
     def __init__(self, feature_num):
-        super(discriminator, self).__init__()
+        super(Discriminator, self).__init__()
         self.feat_n = feature_num
         self.dis = nn.Sequential(
             nn.Conv2d(512, 256, 1), 
@@ -26,9 +26,9 @@ class discriminator(nn.Module):
         hom = self.homo(tmp)
         return crit, hom
 
-class encoder(nn.Module):
+class Encoder(nn.Module):
     def __init__(self):
-        super(encoder, self).__init__()
+        super(Encoder, self).__init__()
         self.model = []
         size = 128
         ch = [3, 64, 128, 256, 512]
@@ -53,9 +53,9 @@ class encoder(nn.Module):
         return x
 
 
-class interp(nn.Module):
+class Interp(nn.Module):
     def __init__(self, feature_num):
-        super(interp, self).__init__()
+        super(Interp, self).__init__()
         self.feat_n = feature_num
         self.interp_set = []
         for i in range(feature_num):
@@ -75,9 +75,9 @@ class interp(nn.Module):
         return x
 
 
-class decoder(nn.Module):
+class Decoder(nn.Module):
     def __init__(self):
-        super(decoder, self).__init__()
+        super(Decoder, self).__init__()
         model = []
         ch = [512, 512, 256, 128, 64]
         dep = [1, 3, 3, 1]
@@ -97,7 +97,7 @@ class decoder(nn.Module):
                 nn.Conv2d(ch[i + 1], ch[i + 1], 3, 1, 1), 
                 nn.BatchNorm2d(ch[i + 1]), 
                 nn.ReLU()
-            ]
+            ] 
         
         model = model + [nn.Conv2d(64, 3, 3, 1, 1)]
         
@@ -105,4 +105,14 @@ class decoder(nn.Module):
 
     def forward(self, f):
         x = self.dec(f)
+        return x
+
+class KG(nn.module):
+    def __init__(self, feature_num):
+        super(KG, self).__init__()
+        self.feat_n = feature_num
+        self.model = nn.Conv2d(self.feat_n, vgg_num, 1, 1)
+    
+    def forward(self, feat):
+        x = self.model(feat)
         return x
