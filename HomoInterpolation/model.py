@@ -2,6 +2,8 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
+vgg_num = 100
+
 class Discriminator(nn.Module):
     def __init__(self, feature_num):
         super(Discriminator, self).__init__()
@@ -108,10 +110,9 @@ class Decoder(nn.Module):
         return x
 
 class KG(nn.module):
-    def __init__(self, feature_num):
+    def __init__(self):
         super(KG, self).__init__()
-        self.feat_n = feature_num
-        self.model = nn.Conv2d(self.feat_n, vgg_num, 1, 1)
+        self.model = nn.Conv2d(512, vgg_num, 1, 1)
     
     def forward(self, feat):
         x = self.model(feat)
