@@ -30,16 +30,27 @@ if __name__ == "__main__":
     BCE_criterion = nn.BCELoss()
 
     full_strenth = torch.tensor(torch.ones(batch_size, feat_n))
+    """load data there"""
     dataset = 0
 
     for i in range(epoch):
-        for t, images, tags in enumerate(dataset):
+        for t, images, attr in enumerate(dataset):
             
             strength = torch.tensor(torch.randn(batch_size, feat_n))
-            
+            perm = torch.randperm(batch_size)
+
             real_F = E(images)
-            Fj = F
-            interp_F = I(real_F, Fj, strength)
+            perm_F = real_F[perm]
+            interp_F = I(real_F, perm_F, strength)
+
+            perm_attr = []
+            interp_attr = []
+            for att in attr:
+                perm_attr += [att[perm]]
+            # ??
+            for i, (att, perm_att) in enumerate(zip(attr, perm_attr)):
+                interp_attr += [att + strength[i] * (perm_att - att)]
+            # ??
 
             E_optim.zero_grad()
             D_optim.zero_grad()
@@ -70,7 +81,7 @@ if __name__ == "__main__":
             I_optim.zero_grad()
             P_optim.zero_grad()
 
-            """calculate the KG loss by using VGG as the teacher here and renew the network"""
+            """calculate the KG loss by using VGG as the teacher here and modify the network"""
 
             if t % batch_penalty == 0:
                 E_optim.zero_grad()
@@ -82,8 +93,8 @@ if __name__ == "__main__":
                 interp_critic, interp_attr = dis(interp_F)
                 EI_loss = -interp_critic.mean()
                 """calculate the classfication loss here"""
-                total_interp_F = I(real_F, Fj, full_strenth)
-                EI_loss += MSE_criterion(total_interp_F, Fj)
+                total_interp_F = I(real_F, perm_F, full_strenth)
+                EI_loss += MSE_criterion(total_interp_F, perm_F)
                 EI_loss.backward()
 
                 E_optim.step()
