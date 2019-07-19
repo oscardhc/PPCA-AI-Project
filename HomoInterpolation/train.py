@@ -112,11 +112,11 @@ if __name__ == "__main__":
                 E_optim.step()
                 I_optim.step()
 
-
-
-
-
-        torch.save(E.state_dict(), "encoder.pth")
-        torch.save(D.state_dict(), "decoder.pth")
-        torch.save(dis.state_dict(), "Discriminator.pth")
-        torch.save(I.state_dict(), "Interp.pth")
+            if t % 1000 == 0:
+                torch.save(E.state_dict(), "encoder.pth")
+                torch.save(D.state_dict(), "decoder.pth")
+                torch.save(dis.state_dict(), "Discriminator.pth")
+                torch.save(I.state_dict(), "Interp.pth")
+                torch.save(P.state_dict(), "KG.pth")
+                """out put some information about the status there"""
+        """test the result of the net there"""
