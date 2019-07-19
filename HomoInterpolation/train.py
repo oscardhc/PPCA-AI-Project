@@ -68,10 +68,16 @@ if __name__ == "__main__":
             D_optim.zero_grad()
 
             real_critc, real_attr = dis(real_F.detach())
-            interp_critic, interp_attr = dis(interp_F.detach())
+            interp_critic, interp_homo_attr = dis(interp_F.detach())
             dis_loss = (interp_critic - real_critc).mean()
             """calculate the gradient penalty there"""
-            """calculate the classfication loss there"""
+            cl_loss = 0
+            tmp_real_attr = [att.detach() for att in real_attr]
+            for real_att, interp_homo_att in zip(tmp_real_attr, interp_homo_attr):
+                cl_loss += nn.BCEWithLogitsLoss(interp_homo_att, real_att, size_average=True)
+            cl_loss /= tmp_real_attr.size(0)
+            dis_loss += cl_loss
+            """calculate the classfication loss there. done"""
             dis_loss.backward(retain_grapth=True)
             dis_optim.step()
 
@@ -90,9 +96,15 @@ if __name__ == "__main__":
                 I_optim.zero_grad()
                 P_optim.zero_grad()
 
-                interp_critic, interp_attr = dis(interp_F)
+                interp_critic, interp_homo_attr = dis(interp_F)
                 EI_loss = -interp_critic.mean()
-                """calculate the classfication loss here"""
+                cl_loss = 0
+                tmp_interp_attr = [att.detach() for att in interp_attr]
+                for interp_att, homo_att in zip(tmp_interp_attr, interp_homo_attr):
+                    cl_loss += nn.BCEWithLogitsLoss(homo_att, interp_att, size_averate=True)
+                cl_loss /= tmp_interp_attr.size(0)
+                EI_loss += cl_loss
+                """calculate the classfication loss here. done"""
                 total_interp_F = I(real_F, perm_F, full_strenth)
                 EI_loss += MSE_criterion(total_interp_F, perm_F)
                 EI_loss.backward()
