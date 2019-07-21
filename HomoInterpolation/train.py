@@ -3,7 +3,8 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import model as m
-
+from dataset import CelebADataset
+from torch.utils.data import DataLoader
 
 epoch = 100
 batch_size = 16
@@ -31,7 +32,7 @@ if __name__ == "__main__":
 
     full_strenth = torch.tensor(torch.ones(batch_size, feat_n))
     """load data there"""
-    dataset = 0
+    dataset = DataLoader(CelebADataset(), batch_size=32, shuffle=True, num_workers=4)
 
     for i in range(epoch):
         for t, images, attr in enumerate(dataset):
