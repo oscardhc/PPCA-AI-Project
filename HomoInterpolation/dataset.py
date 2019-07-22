@@ -17,7 +17,6 @@ class CelebADataset(torch.utils.data.Dataset):
         self.path = path
         self.num = num
         self.picSize = picSize
-        self.atrs
         self.name = []
         self.attr = []
         

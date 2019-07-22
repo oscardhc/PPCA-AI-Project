@@ -1,25 +1,23 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import torch.nn.functional as F
 import model as m
 from dataset import CelebADataset
 from torch.utils.data import DataLoader
 
-epoch = 100
-batch_size = 16
-feat_n = 10
-batch_penalty = 5
 
-if __name__ == "__main__":
-    CEL_criterion = nn.CrossEntropyLoss()
-    criterion = nn.MSELoss()
+def train(device):
 
-    E = m.Encoder()
-    D = m.Decoder()
-    dis = m.Discriminator()
-    I = m.Interp()
-    P = m.KG()
+    epoch = 100
+    batch_size = 16
+    feat_n = 10
+    batch_penalty = 5
+
+    E = m.Encoder().to(device)
+    D = m.Decoder().to(device)
+    dis = m.Discriminator().to(device)
+    I = m.Interp().to(device)
+    P = m.KG().to(device)
 
     E_optim = optim.Adam(E.parameters(), lr=0.0002)
     D_optim = optim.Adam(D.parameters(), lr=0.0002)
@@ -27,18 +25,21 @@ if __name__ == "__main__":
     I_optim = optim.Adam(I.parameters(), lr=0.0002)
     P_optim = optim.Adam(P.parameters(), lr=0.0002)
 
-    MSE_criterion = nn.MSELoss()
-    BCE_criterion = nn.BCELoss()
+    MSE_criterion = nn.MSELoss().to(device)
+    BCE_criterion = nn.BCEWithLogitsLoss().to(device)
 
-    full_strenth = torch.tensor(torch.ones(batch_size, feat_n))
+    full_strenth = torch.ones(batch_size, feat_n).to(device)
     """load data there"""
     dataset = DataLoader(CelebADataset(), batch_size=batch_size, shuffle=True, num_workers=4)
 
     for i in range(epoch):
         for t, images, attr in enumerate(dataset):
-            
-            strength = torch.tensor(torch.randn(batch_size, feat_n))
-            perm = torch.randperm(batch_size)
+
+            images = images.to(device)
+            attr = attr.to(device)
+
+            strength = torch.randn(batch_size, feat_n).to(device)
+            perm = torch.randperm(batch_size).to(device)
 
             real_F = E(images)
             perm_F = real_F[perm]
@@ -75,7 +76,7 @@ if __name__ == "__main__":
             cl_loss = 0
             tmp_real_attr = [att.detach() for att in real_attr]
             for real_att, interp_homo_att in zip(tmp_real_attr, interp_homo_attr):
-                cl_loss += nn.BCEWithLogitsLoss(interp_homo_att, real_att, size_average=True)
+                cl_loss += BCE_criterion(interp_homo_att, real_att, size_average=True)
             cl_loss /= tmp_real_attr.size(0)
             dis_loss += cl_loss
             """calculate the classfication loss there. done"""
@@ -102,7 +103,7 @@ if __name__ == "__main__":
                 cl_loss = 0
                 tmp_interp_attr = [att.detach() for att in interp_attr]
                 for interp_att, homo_att in zip(tmp_interp_attr, interp_homo_attr):
-                    cl_loss += nn.BCEWithLogitsLoss(homo_att, interp_att, size_averate=True)
+                    cl_loss += BCE_criterion(homo_att, interp_att, size_averate=True)
                 cl_loss /= tmp_interp_attr.size(0)
                 EI_loss += cl_loss
                 """calculate the classfication loss here. done"""
