@@ -132,5 +132,8 @@ class Program(object):
                     """out put some information about the status there"""
             """test the result of the net there"""
 
-    def run(self, imagea, imageb, strength):
-        pass
+    def run(self, imageA, imageB, strength):
+        featA = self.E(imageA)
+        featB = self.E(imageB)
+        feat_interp = self.I(imageA, imageB, strength)
+        return self.D(image_interp)
