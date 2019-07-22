@@ -27,9 +27,10 @@ def train(device):
 
     for _ in range(epoch):
         for i, images, tags in enumerate(dataset):
+            b_size = images.siez(0)
             images = images.to(device)
             tags = tags.to(device)
-            perm = torch.randperm(batch_size)
+            perm = torch.randperm(b_size)
             f_tags = tags[perm]
 
             A_in, C_in = G(images, f_tags)
@@ -48,7 +49,7 @@ def train(device):
             """add gradient penalty there"""
             La = grad_loss(A_in) + grad_loss(A_f) + A_in.mean() + A_f.mean()
             Lcon = MSE_criterion(DYg, f_tags) + MSE_criterion(DYi, tags)
-            Lcon /= batch_size
+            Lcon /= b_size
             Lcyc = L1_criterion(back_images, images)
 
             G_optim.zero_grad()

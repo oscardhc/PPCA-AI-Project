@@ -117,7 +117,7 @@ class Decoder(nn.Module):
 class KG(nn.Module):
     def __init__(self):
         super(KG, self).__init__()
-        self.model = nn.Conv2d(512, 512, 1, 1)
+        self.model = nn.Conv2d(512, 512, 1)
     
     def forward(self, feat):
         x = self.model(feat)
