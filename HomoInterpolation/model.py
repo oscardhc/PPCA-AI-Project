@@ -1,6 +1,8 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
+import torchvision.models
+from collections import OrderedDict
 
 
 class Discriminator(nn.Module):
@@ -35,6 +37,7 @@ class Encoder(nn.Module):
 
         if useVGG:
             self.model = VGG()
+            print(self)
         else:
             model = []
             size = 128
@@ -72,7 +75,9 @@ class Interp(nn.Module):
                     nn.LeakyReLU(0.2, inplace=True)
                 ]
             model = model + [nn.Conv2d(512, 512, 3, 1, 1)]
-            self.interp_set = self.interp_set + [nn.sequential(*model)]
+            self.interp_set = self.interp_set + [nn.Sequential(*model)]
+
+        self.interp_set = nn.ModuleList(self.interp_set)
         
     def forward(self, fA, fB, str):
         x = fA
@@ -126,8 +131,40 @@ class KG(nn.Module):
 
 class VGG(nn.Module):
 
-    def __init__(self, path = 'checkpoints/vgg.model'):
-        self.model = torch.load(path)
+    def __init__(self, path = '/Users/oscar/Downloads/vgg/vgg.pth'):
+        super(VGG, self).__init__()
+        model = OrderedDict()
+        size = 128
+        ch = [3, 64, 128, 256, 512]
+        dep = [2, 2, 4, 4]
+        for i in range(4):
+            model.update(OrderedDict([
+                ('conv%d_%d' % (i+1, 1), nn.Conv2d(ch[i], ch[i + 1], 3, 1, 1)),
+                ('relu%d_%d' % (i+1, 1), nn.ReLU(inplace=True))
+            ]))
+            for j in range(dep[i] - 1):
+                model.update(OrderedDict([
+                    ('conv%d_%d' % (i+1, j+2), nn.Conv2d(ch[i + 1], ch[i + 1], 3, 1, 1)),
+                    ('relu%d_%d' % (i+1, j+2), nn.ReLU(inplace=True))
+                ]))
+            model.update(OrderedDict([('pool%d' % (i+1), nn.MaxPool2d((2, 2)))]))
+        model.update(OrderedDict([
+            ('conv5_1', nn.Conv2d(512, 512, 3, 1, 1)),
+            ('relu5_1', nn.ReLU(inplace=True))
+        ]))
+        self.model = nn.Sequential(model)
+
+        sdict = torch.load(path)
+        mdict = self.state_dict()
+
+        def contains(x):
+            x = x[6:]
+            for i in sdict.keys():
+                if i.find(x) != -1:
+                    return sdict[i]
+
+        sdict = {key: contains(key) for key, value in mdict.items()}
+        self.load_state_dict(sdict)
 
     def forward(self, x):
         return self.model(x)

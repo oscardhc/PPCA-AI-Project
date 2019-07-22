@@ -33,9 +33,9 @@ class CelebADataset(torch.utils.data.Dataset):
         return self.num
     
     def getImage(self, index):
-        img = Image.open(self.name[index])
-        img.resize((self.picSize, self.picsize))
-        return (img.numpy() / 255.0).transpose(2, 0, 1)
+        img = Image.open(self.path + '/' + self.name[index])
+        img = img.resize((self.picSize, self.picSize))
+        return (np.array(img) / 255.0).transpose(2, 0, 1)
 
 
     def __getitem__(self, item):
