@@ -9,7 +9,6 @@ import numpy as np
 import csv
 import torch.utils.data
 
-
 class CelebADataset(torch.utils.data.Dataset):
 
     def __init__(self, num, path, picSize, attr):
@@ -31,9 +30,16 @@ class CelebADataset(torch.utils.data.Dataset):
         
     def __len__(self):
         return self.num
-    
+
     def getImage(self, index):
         img = Image.open(self.path + '/' + self.name[index])
+
+        W, H = img.size
+        bnd = (H - W) // 2
+        img = img.crop((0, bnd, W, W))
+
+        'TODO: face orientation'
+
         img = img.resize((self.picSize, self.picSize))
         return (np.array(img) / 255.0).transpose(2, 0, 1)
 

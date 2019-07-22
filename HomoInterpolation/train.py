@@ -4,27 +4,33 @@ import torch.optim as optim
 import model as m
 from dataset import CelebADataset
 from torch.utils.data import DataLoader
+import numpy as np
+from PIL import Image
 
 
 class Program(object):
-    def __init__(self, device, attr):
+    def __init__(self, imgsize, device, attr, toLoad):
         super().__init__()
         self.epoch = 100
         self.batch_size = 16
-        self.feat_n = 10
+        self.feat_n = len(attr)
         self.batch_penalty = 1
+        self.imgsize = imgsize
 
         self.fixedImgs = []
         self.total_step = 0
 
         self.E = m.Encoder().to(device)
         self.D = m.Decoder().to(device)
-        self.dis = m.Discriminator(len(attr)).to(device)
-        self.I = m.Interp(len(attr)).to(device)
+        self.dis = m.Discriminator(self.feat_n).to(device)
+        self.I = m.Interp(self.feat_n).to(device)
         self.P = m.KG().to(device)
         self.Teacher = m.VGG().to(device)
 
-        self.dataset = CelebADataset(192000, '/Users/oscar/Downloads/celeba-dataset', 128, attr)
+        if toLoad:
+            self.load_model()
+
+        self.dataset = CelebADataset(192000, '/Users/oscar/Downloads/celeba-dataset', self.imgsize, attr)
         self.device = device
 
     def train(self):
@@ -137,7 +143,10 @@ class Program(object):
                 if self.total_step % 1000 == 0:
                     self.save_model()
                     """out put some information about the status there"""
-                """test the result of the net there"""
+
+                if self.total_step % 500 == 0:
+                    self.showResult()
+                    """test the result of the net there"""
 
     def save_model(self):
         with open('mata.txt', 'w') as f:
@@ -158,9 +167,29 @@ class Program(object):
         self.I.load_state_dict(torch.load("Interp.pth"))
         self.P.load_state_dict(torch.load("KG.pth"))
 
-
     def run(self, imageA, imageB, strength):
+        """batch size!"""
+        imageA = imageA.reshape((1, imageA.size(0), imageA.size(1), imageA.size(2)))
+        imageB = imageB.reshape((1, imageA.size(0), imageA.size(1), imageA.size(2)))
         featA = self.E(imageA)
         featB = self.E(imageB)
         feat_interp = self.I(featA, featB, strength)
         return self.D(feat_interp)
+
+    def showResult(self):
+        rg = len(self.fixedImgs) - 1
+        tt = []
+        for i in range(rg):
+            for j in range(self.feat_n):
+                str = torch.zeros((1, self.feat_n))
+                tmp = []
+                for k in range(0, 1.5, 0.3):
+                    str[0][j] = k
+                    res = self.run(self.fixedImgs[i], self.fixedImgs[i + 1], str)
+                    res.squeeze_()
+                    res = res.transpose(1, 2, 0)
+                    tmp.append(res)
+                tt.append(np.hstack(tmp))
+        ary = np.vstack(tt)
+        img = Image.fromarray(ary)
+        img.save('res-%06d.jpg' % (self.total_step))
