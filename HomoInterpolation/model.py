@@ -32,31 +32,12 @@ class Discriminator(nn.Module):
 
 
 class Encoder(nn.Module):
+
     def __init__(self, useVGG=True):
         super(Encoder, self).__init__()
+        self.model = VGG()
+        # print(self.state_dict())
 
-        if useVGG:
-            self.model = VGG()
-            print(self)
-        else:
-            model = []
-            size = 128
-            ch = [3, 64, 128, 256, 512]
-            dep = [2, 2, 4, 4]
-            for i in range(4):
-                model = model + [
-                    nn.Conv2d(ch[i], ch[i + 1], 3, 1, 1),
-                    nn.ReLU()
-                ]
-                for _ in range(dep[i] - 1):
-                    model = model + [
-                        nn.Conv2d(ch[i + 1], ch[i + 1], 3, 1, 1),
-                        nn.ReLU()
-                    ]
-                model = model + [nn.MaxPool2d((2, 2))]
-            model = model + [nn.Conv2d(512, 512, 3, 1, 1)]
-            self.model = nn.Sequential(*model)
-    
     def forward(self, image):
         x = self.model(image)
         return x

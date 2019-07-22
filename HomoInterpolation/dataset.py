@@ -37,7 +37,6 @@ class CelebADataset(torch.utils.data.Dataset):
         img = img.resize((self.picSize, self.picSize))
         return (np.array(img) / 255.0).transpose(2, 0, 1)
 
-
     def __getitem__(self, item):
         """
         :param item:index of the pic
