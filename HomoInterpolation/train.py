@@ -32,7 +32,7 @@ if __name__ == "__main__":
 
     full_strenth = torch.tensor(torch.ones(batch_size, feat_n))
     """load data there"""
-    dataset = DataLoader(CelebADataset(), batch_size=32, shuffle=True, num_workers=4)
+    dataset = DataLoader(CelebADataset(), batch_size=batch_size, shuffle=True, num_workers=4)
 
     for i in range(epoch):
         for t, images, attr in enumerate(dataset):
@@ -50,7 +50,7 @@ if __name__ == "__main__":
                 perm_attr += [att[perm]]
             # ??
             for i, (att, perm_att) in enumerate(zip(attr, perm_attr)):
-                interp_attr += [att + strength[i] * (perm_att - att)]
+                interp_attr += [att + strength[:, i:i + 1] * (perm_att - att)]
             # ??
 
             E_optim.zero_grad()
