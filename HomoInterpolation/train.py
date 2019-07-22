@@ -124,13 +124,23 @@ class Program(object):
                     I_optim.step()
 
                 if t % 1000 == 0:
-                    torch.save(self.E.state_dict().cpu(), "encoder.pth")
-                    torch.save(self.D.state_dict().cpu(), "decoder.pth")
-                    torch.save(self.dis.state_dict().cpu(), "Discriminator.pth")
-                    torch.save(self.I.state_dict().cpu(), "Interp.pth")
-                    torch.save(self.P.state_dict().cpu(), "KG.pth")
+                    save_model()
                     """out put some information about the status there"""
             """test the result of the net there"""
+    def save_model(self):
+        torch.save(self.E.state_dict().cpu(), "encoder.pth")
+        torch.save(self.D.state_dict().cpu(), "decoder.pth")
+        torch.save(self.dis.state_dict().cpu(), "Discriminator.pth")
+        torch.save(self.I.state_dict().cpu(), "Interp.pth")
+        torch.save(self.P.state_dict().cpu(), "KG.pth")
+
+    def load_model(self):
+        self.E.load_state_dict(torch.load("encoder.pth"))
+        self.D.load_state_dict(torch.load("decoder.pth"))
+        self.dis.load_state_dict(torch.load("Discriminator.pth"))
+        self.I.load_state_dict(torch.load("Interp.pth"))
+        self.P.load_state_dict(torch.load("KG.pth"))
+
 
     def run(self, imageA, imageB, strength):
         featA = self.E(imageA)
