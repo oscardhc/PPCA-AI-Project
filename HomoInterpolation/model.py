@@ -6,9 +6,8 @@ from collections import OrderedDict
 
 
 class Discriminator(nn.Module):
-    def __init__(self, feature_num):
+    def __init__(self, attr):
         super(Discriminator, self).__init__()
-        self.feat_n = feature_num
         self.dis = nn.Sequential(
             nn.Conv2d(512, 256, 1), 
             nn.InstanceNorm2d(256, affine=True), 
@@ -22,14 +21,19 @@ class Discriminator(nn.Module):
             nn.Conv2d(256, 256, 2, 1)
         )
         self.critic = nn.Conv2d(256, 256, 1, 1)
-        self.homo = nn.Conv2d(256, self.feat_n, 1, 1)
+        self.homo = []
+        for att in attr:
+            self.homo += [nn.Conv2d(256, att, 1, 1)]
 
     def forward(self, feat):
         tmp = self.dis(feat)
         crit = self.critic(tmp)
-        hom = self.homo(tmp)
-        hom = hom.squeeze().transpose(1, 0)
-        return crit, hom
+        homo_attr_out = []
+        for homo_net in self.homo:
+            temp = homo_net(tmp)
+            temp = temp.squeeze()
+            homo_attr_out += [temp]
+        return crit, homo_attr_out
 
 
 class Encoder(nn.Module):

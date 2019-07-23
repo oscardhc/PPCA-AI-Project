@@ -65,7 +65,7 @@ class Program(object):
                 images = images.float().to(device)
                 attr = attr.float().to(device)
 
-                strength = torch.rand(self.batch_size).to(device)
+                strength = torch.rand(images.size(0), attr.size(0)).to(device)
                 perm = torch.randperm(self.batch_size).to(device)
 
                 real_F = self.E(images)
@@ -77,7 +77,7 @@ class Program(object):
                 for att in attr:
                     perm_attr += [att[perm]]
                 for i, (att, perm_att) in enumerate(zip(attr, perm_attr)):
-                    interp_attr += [att + strength * (perm_att - att)]
+                    interp_attr += [att + strength[:, i:i + 1] * (perm_att - att)]
 
                 E_optim.zero_grad()
                 D_optim.zero_grad()
