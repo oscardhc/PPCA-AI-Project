@@ -127,7 +127,7 @@ class Program(object):
                 dis_loss += gp_loss
 
                 cl_loss = 0
-                tmp_real_attr = [att.detach() for att in real_attr]
+                tmp_real_attr = [att.detach() for att in attr]
                 for real_att, interp_homo_att in zip(tmp_real_attr, interp_homo_attr):
                     cl_loss += BCE_criterion(interp_homo_att, real_att) / real_att.size(0)
                 dis_loss += cl_loss
@@ -162,8 +162,14 @@ class Program(object):
                         cl_loss += BCE_criterion(homo_att, interp_att) / homo_att.size(0)
                     EI_loss += cl_loss
                     """calculate the classfication loss here. done"""
-                    total_interp_F = self.I(real_F, perm_F, full_strenth)
-                    EI_loss += MSE_criterion(total_interp_F, perm_F)
+                    total_interp_F = self.I(real_F.detach(), perm_F.detach(), full_strenth)
+                    EI_loss += MSE_criterion(total_interp_F, perm_F.detach())
+                    EI_real_dec = self.D(real_F)
+                    EI_loss += MSE_criterion(EI_real_dec, images.detach())
+                    EI_vgg_feat = self.Teacher(images).detach()
+                    EI_vgg_loss = MSE_criterion(EI_vgg_feat, self.P(real_F))
+                    EI_loss += EI_vgg_loss
+                    EI_loss += MSE_criterion(self.Teacher(EI_real_dec), self.Teacher(images.detach()))
                     EI_loss.backward()
 
                     E_optim.step()
