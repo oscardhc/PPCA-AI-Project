@@ -11,12 +11,16 @@ import tensorboardX
 
 
 class Program(object):
-    def __init__(self, imgsize, device, attr, toLoad, onServer):
+
+    def __init__(self, imgsize, device, attr, toLoad, onServer, attrGroup):
         super().__init__()
         self.epoch = 100
-        self.batch_size = 16
+        self.batch_size = 24
+
         self.attr_n = len(attr)
-        self.batch_penalty = 1
+        self.attrGroup = attrGroup
+
+        self.batch_penalty = 4
         self.imgsize = imgsize
 
         self.fixedImgs = []
@@ -196,7 +200,6 @@ class Program(object):
                 wr.add_scalar('scalar/VGG', vgg_loss.item(), self.total_step)
                 wr.add_scalar('scalar/EI', EI_loss.item(), self.total_step)
 
-
     def save_model(self):
         with open('mata.txt', 'w') as f:
             print(self.total_step, file=f)
@@ -229,15 +232,17 @@ class Program(object):
         rg = len(self.fixedImgs) - 1
         tt = []
         for i in range(rg):
-            for j in range(self.attr_n):
+            for ll, rr in self.attrGroup:
                 tmp = []
                 tmp.append(self.fixedImgs[i].detach().numpy().transpose(1, 2, 0))
-                str = torch.zeros(self.attr_n, 1).to(self.device)
+                ste = torch.zeros(self.attr_n, 1).to(self.device)
                 for _k in range(5):
                     k = 0.3 * _k
-                    str[j][0] = k
-                    res = self.run(self.fixedImgs[i].to(self.device), self.fixedImgs[i + 1].to(self.device), str)
-                    str[j][0] = 0
+                    for j in range(ll, rr):
+                        ste[j][0] = k
+                    res = self.run(self.fixedImgs[i].to(self.device), self.fixedImgs[i + 1].to(self.device), ste)
+                    for j in range(ll, rr):
+                        ste[j][0] = 0
                     res.squeeze_()
                     res = res.detach().cpu().numpy().transpose(1, 2, 0)
                     tmp.append(res)
@@ -245,4 +250,4 @@ class Program(object):
                 tt.append(np.hstack(tmp))
         ary = np.vstack(tt)
         img = Image.fromarray((ary * 255).astype('uint8'))
-        img.save('res-%06d.jpg' % (self.total_step))
+        img.save('res-%06d.jpg' % self.total_step)
