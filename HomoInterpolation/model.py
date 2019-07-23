@@ -28,6 +28,7 @@ class Discriminator(nn.Module):
         tmp = self.dis(feat)
         crit = self.critic(tmp)
         hom = self.homo(tmp)
+        hom = hom.squeeze().transpose(1, 0)
         return crit, hom
 
 

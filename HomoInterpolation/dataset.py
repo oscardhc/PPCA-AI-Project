@@ -27,6 +27,8 @@ class CelebADataset(torch.utils.data.Dataset):
                     cur.append(0 if row[attr_name] == '-1' else 1)
                 self.attr.append(np.array(cur))
                 self.name.append(row['name'])
+                if len(self.name) == self.num:
+                    break
         
     def __len__(self):
         return self.num

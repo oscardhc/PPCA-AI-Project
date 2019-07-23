@@ -6,6 +6,7 @@ from dataset import CelebADataset
 from torch.utils.data import DataLoader
 import numpy as np
 from PIL import Image
+from tqdm import tqdm
 
 
 class Program(object):
@@ -18,6 +19,7 @@ class Program(object):
         self.imgsize = imgsize
 
         self.fixedImgs = []
+        self.fixedlen = 4
         self.total_step = 0
 
         self.E = m.Encoder().to(device)
@@ -49,15 +51,21 @@ class Program(object):
         full_strenth = torch.ones(self.batch_size, self.feat_n).to(device)
         """load data there"""
         dataset = DataLoader(self.dataset, batch_size=self.batch_size, shuffle=True, num_workers=4)
+        fixData = DataLoader(self.dataset, batch_size=self.fixedlen, shuffle=False, num_workers=4)
 
-        for i in range(self.epoch):
+        for _, (img, _) in enumerate(fixData):
+            self.fixedImgs = img
+            break
+
+        for ep in range(self.epoch):
+            process = tqdm(total=len(dataset))
             for t, (images, attr) in enumerate(dataset):
                 attr = attr.transpose(1, 0)
 
                 images = images.float().to(device)
                 attr = attr.float().to(device)
 
-                strength = torch.randn(self.batch_size, self.feat_n).to(device)
+                strength = torch.rand(self.batch_size).to(device)
                 perm = torch.randperm(self.batch_size).to(device)
 
                 real_F = self.E(images)
@@ -68,10 +76,8 @@ class Program(object):
                 interp_attr = []
                 for att in attr:
                     perm_attr += [att[perm]]
-                # ??
                 for i, (att, perm_att) in enumerate(zip(attr, perm_attr)):
-                    interp_attr += [att + strength[:, i:i + 1] * (perm_att - att)]
-                # ??
+                    interp_attr += [att + strength * (perm_att - att)]
 
                 E_optim.zero_grad()
                 D_optim.zero_grad()
@@ -81,7 +87,6 @@ class Program(object):
 
                 real_dec = self.D(real_F)
 
-                print(real_dec.size(), images.size())
                 D_loss = MSE_criterion(real_dec, images)
                 """another part of loss relys on the VGG network"""
                 D_loss.backward(retain_graph=True)
@@ -127,8 +132,7 @@ class Program(object):
                     cl_loss = 0
                     tmp_interp_attr = [att.detach() for att in interp_attr]
                     for interp_att, homo_att in zip(tmp_interp_attr, interp_homo_attr):
-                        cl_loss += BCE_criterion(homo_att, interp_att)
-                    cl_loss /= tmp_interp_attr.size(0)
+                        cl_loss += BCE_criterion(homo_att, interp_att) / homo_att.size(0)
                     EI_loss += cl_loss
                     """calculate the classfication loss here. done"""
                     total_interp_F = self.I(real_F, perm_F, full_strenth)
@@ -138,24 +142,28 @@ class Program(object):
                     E_optim.step()
                     I_optim.step()
 
-                self.total_step += 1
-
                 if self.total_step % 1000 == 0:
                     self.save_model()
                     """out put some information about the status there"""
 
-                if self.total_step % 500 == 0:
+                if self.total_step % 100 == 0:
                     self.showResult()
                     """test the result of the net there"""
+
+                self.total_step += 1
+                process.update(self.batch_size)
+                process.set_description('[%d] D:%.3f DIS:%.3f VGG:%.3f EI:%.3f' % (
+                ep, D_loss.item(), dis_loss.item(), vgg_loss.item(), EI_loss.item()))
+
 
     def save_model(self):
         with open('mata.txt', 'w') as f:
             print(self.total_step, file=f)
-        torch.save(self.E.state_dict().cpu(), "encoder.pth")
-        torch.save(self.D.state_dict().cpu(), "decoder.pth")
-        torch.save(self.dis.state_dict().cpu(), "Discriminator.pth")
-        torch.save(self.I.state_dict().cpu(), "Interp.pth")
-        torch.save(self.P.state_dict().cpu(), "KG.pth")
+        torch.save(self.E.state_dict(), "encoder.pth")
+        torch.save(self.D.state_dict(), "decoder.pth")
+        torch.save(self.dis.state_dict(), "Discriminator.pth")
+        torch.save(self.I.state_dict(), "Interp.pth")
+        torch.save(self.P.state_dict(), "KG.pth")
 
     def load_model(self):
         with open('mata.txt', 'r') as f:
@@ -169,6 +177,7 @@ class Program(object):
 
     def run(self, imageA, imageB, strength):
         """batch size!"""
+        print(imageA.size())
         imageA = imageA.reshape((1, imageA.size(0), imageA.size(1), imageA.size(2)))
         imageB = imageB.reshape((1, imageA.size(0), imageA.size(1), imageA.size(2)))
         featA = self.E(imageA)
@@ -182,13 +191,16 @@ class Program(object):
         for i in range(rg):
             for j in range(self.feat_n):
                 str = torch.zeros((1, self.feat_n))
-                tmp = []
-                for k in range(0, 1.5, 0.3):
+                tmp = [self.fixedImgs[i]]
+                print(self.fixedImgs.size(), self.fixedImgs[i].size())
+                for _k in range(5):
+                    k = _k / 5
                     str[0][j] = k
                     res = self.run(self.fixedImgs[i], self.fixedImgs[i + 1], str)
                     res.squeeze_()
                     res = res.transpose(1, 2, 0)
                     tmp.append(res)
+                tmp.append(self.fixedImgs[i + 1])
                 tt.append(np.hstack(tmp))
         ary = np.vstack(tt)
         img = Image.fromarray(ary)
