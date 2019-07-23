@@ -93,17 +93,18 @@ class Program(object):
 
                 real_dec = self.D(real_F)
 
-                D_loss = MSE_criterion(real_dec, images)
+                D_loss = MSE_criterion(real_dec, images.detach())
                 """another part of loss relys on the VGG network"""
-                D_loss.backward(retain_graph=True)
-
                 dgg_loss = MSE_criterion(self.Teacher(real_dec), self.Teacher(images))
                 D_loss += dgg_loss
-
+                D_loss.backward(retain_graph=True)
                 D_optim.step()
 
                 E_optim.zero_grad()
                 D_optim.zero_grad()
+                dis_optim.zero_grad()
+                I_optim.zero_grad()
+                P_optim.zero_grad()
 
                 real_critc, real_attr = self.dis(real_F.detach())
                 interp_critic, interp_homo_attr = self.dis(interp_F.detach())
