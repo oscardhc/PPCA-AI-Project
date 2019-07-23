@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 
 class Program(object):
-    def __init__(self, imgsize, device, attr, toLoad):
+    def __init__(self, imgsize, device, attr, toLoad, onServer):
         super().__init__()
         self.epoch = 100
         self.batch_size = 16
@@ -22,17 +22,23 @@ class Program(object):
         self.fixedlen = 3
         self.total_step = 0
 
-        self.E = m.Encoder().to(device)
+        self.E = m.Encoder(
+            path='/home/oscar/dhc/HomoInterpGAN/checkpoints/vgg/vgg.pth' if onServer else '/Users/oscar/Downloads/vgg/vgg.pth').to(
+            device)
         self.D = m.Decoder().to(device)
         self.dis = m.Discriminator(self.attr_n).to(device)
         self.I = m.Interp(self.attr_n).to(device)
         self.P = m.KG().to(device)
-        self.Teacher = m.VGG().to(device)
+        self.Teacher = m.VGG(
+            path='/home/oscar/dhc/HomoInterpGAN/checkpoints/vgg/vgg.pth' if onServer else '/Users/oscar/Downloads/vgg/vgg.pth').to(
+            device)
 
         if toLoad:
             self.load_model()
 
-        self.dataset = CelebADataset(192000, '/Users/oscar/Downloads/celeba-dataset', self.imgsize, attr)
+        self.dataset = CelebADataset(192000,
+                                     '/home/oscar/dhc/celeba-dataset' if onServer else '/Users/oscar/Downloads/celeba-dataset',
+                                     self.imgsize, attr)
         self.device = device
 
     def train(self):
@@ -46,7 +52,7 @@ class Program(object):
         P_optim = optim.Adam(self.P.parameters(), lr=0.0002)
 
         MSE_criterion = nn.MSELoss().to(device)
-        BCE_criterion = nn.BCEWithLogitsLoss(reduction='mean').to(device)
+        BCE_criterion = nn.BCEWithLogitsLoss().to(device)
 
         full_strenth = torch.ones(self.attr_n, self.batch_size).to(device)
         """load data there"""
@@ -58,7 +64,7 @@ class Program(object):
             break
 
         for ep in range(self.epoch):
-            process = tqdm(total=(len(dataset) * self.batch_size))
+            process = tqdm(total=(len(dataset)))
             for t, (images, attr) in enumerate(dataset):
                 attr = attr.transpose(1, 0)
 
@@ -90,6 +96,10 @@ class Program(object):
                 D_loss = MSE_criterion(real_dec, images)
                 """another part of loss relys on the VGG network"""
                 D_loss.backward(retain_graph=True)
+
+                dgg_loss = MSE_criterion(self.Teacher(real_dec), self.Teacher(images))
+                D_loss += dgg_loss
+
                 D_optim.step()
 
                 E_optim.zero_grad()
@@ -98,7 +108,23 @@ class Program(object):
                 real_critc, real_attr = self.dis(real_F.detach())
                 interp_critic, interp_homo_attr = self.dis(interp_F.detach())
                 dis_loss = (interp_critic - real_critc).mean()
-                """calculate the gradient penalty there"""
+
+                """calculate the gradient penalty there.done."""
+                alpha = torch.tensor(np.random.random((real_critc.size(0), 1, 1, 1))).float().to(device)
+                mid_F = real_F + alpha * (interp_F - real_F)
+                mid_F.requires_grad_(True)
+                mid_critic, _ = self.dis(mid_F)
+                grad = torch.autograd.grad(
+                    outputs=mid_critic,
+                    inputs=mid_F,
+                    grad_outputs=torch.ones(mid_critic.size()).to(self.device),
+                    create_graph=True,
+                    retain_graph=True,
+                    only_inputs=True
+                )[0].view(real_critc.size(0), -1)
+                gp_loss = 100 * ((grad.norm(2, dim=1) - 1) ** 2).mean()
+                dis_loss += gp_loss
+
                 cl_loss = 0
                 tmp_real_attr = [att.detach() for att in real_attr]
                 for real_att, interp_homo_att in zip(tmp_real_attr, interp_homo_attr):
@@ -151,7 +177,7 @@ class Program(object):
                     """test the result of the net there"""
 
                 self.total_step += 1
-                process.update(self.batch_size)
+                process.update(1)
                 process.set_description('[%d] D:%.3f DIS:%.3f VGG:%.3f EI:%.3f' % (
                 ep, D_loss.item(), dis_loss.item(), vgg_loss.item(), EI_loss.item()))
 
@@ -177,7 +203,6 @@ class Program(object):
 
     def run(self, imageA, imageB, strength):
         """batch size!"""
-        print(imageA.size())
         imageA = imageA.reshape((1, 3, self.imgsize, self.imgsize))
         imageB = imageB.reshape((1, 3, self.imgsize, self.imgsize))
         featA = self.E(imageA)
@@ -196,7 +221,7 @@ class Program(object):
                 for _k in range(5):
                     k = 0.3 * _k
                     str[j][0] = k
-                    res = self.run(self.fixedImgs[i], self.fixedImgs[i + 1], str)
+                    res = self.run(self.fixedImgs[i].to(self.device), self.fixedImgs[i + 1].to(self.device), str)
                     str[j][0] = 0
                     res.squeeze_()
                     res = res.detach().numpy().transpose(1, 2, 0)

@@ -34,9 +34,9 @@ class Discriminator(nn.Module):
 
 class Encoder(nn.Module):
 
-    def __init__(self, useVGG=True):
+    def __init__(self, path):
         super(Encoder, self).__init__()
-        self.model = VGG()
+        self.model = VGG(path)
         # print(self.state_dict())
 
     def forward(self, image):
@@ -65,7 +65,6 @@ class Interp(nn.Module):
         x = fA
         for i in range(self.attr_n):
             k = strenth[i]
-            print(k.size(), fA.size())
             k = k.unsqueeze(1).unsqueeze(2).unsqueeze(3).expand_as(fA)
             x = x + self.interp_set[i](fB - fA) * k
         return x
@@ -116,7 +115,7 @@ class KG(nn.Module):
 
 class VGG(nn.Module):
 
-    def __init__(self, path = '/Users/oscar/Downloads/vgg/vgg.pth'):
+    def __init__(self, path):
         super(VGG, self).__init__()
         model = OrderedDict()
         size = 128
