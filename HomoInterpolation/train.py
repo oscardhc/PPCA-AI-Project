@@ -19,7 +19,7 @@ class Program(object):
         self.imgsize = imgsize
 
         self.fixedImgs = []
-        self.fixedlen = 4
+        self.fixedlen = 3
         self.total_step = 0
 
         self.E = m.Encoder().to(device)
@@ -54,11 +54,11 @@ class Program(object):
         fixData = DataLoader(self.dataset, batch_size=self.fixedlen, shuffle=False, num_workers=4)
 
         for _, (img, _) in enumerate(fixData):
-            self.fixedImgs = img
+            self.fixedImgs = img.float()
             break
 
         for ep in range(self.epoch):
-            process = tqdm(total=len(dataset))
+            process = tqdm(total=(len(dataset) * self.batch_size))
             for t, (images, attr) in enumerate(dataset):
                 attr = attr.transpose(1, 0)
 
@@ -178,8 +178,8 @@ class Program(object):
     def run(self, imageA, imageB, strength):
         """batch size!"""
         print(imageA.size())
-        imageA = imageA.reshape((1, imageA.size(0), imageA.size(1), imageA.size(2)))
-        imageB = imageB.reshape((1, imageA.size(0), imageA.size(1), imageA.size(2)))
+        imageA = imageA.reshape((1, 3, self.imgsize, self.imgsize))
+        imageB = imageB.reshape((1, 3, self.imgsize, self.imgsize))
         featA = self.E(imageA)
         featB = self.E(imageB)
         feat_interp = self.I(featA, featB, strength)
@@ -191,17 +191,17 @@ class Program(object):
         for i in range(rg):
             for j in range(self.feat_n):
                 str = torch.zeros((1, self.feat_n))
-                tmp = [self.fixedImgs[i]]
+                tmp = [self.fixedImgs[i].detach().numpy().transpose(1, 2, 0)]
                 print(self.fixedImgs.size(), self.fixedImgs[i].size())
                 for _k in range(5):
                     k = _k / 5
                     str[0][j] = k
                     res = self.run(self.fixedImgs[i], self.fixedImgs[i + 1], str)
                     res.squeeze_()
-                    res = res.transpose(1, 2, 0)
+                    res = res.detach().numpy().transpose(1, 2, 0)
                     tmp.append(res)
-                tmp.append(self.fixedImgs[i + 1])
+                tmp.append(self.fixedImgs[i + 1].detach().numpy().transpose(1, 2, 0))
                 tt.append(np.hstack(tmp))
         ary = np.vstack(tt)
-        img = Image.fromarray(ary)
+        img = Image.fromarray((ary * 255).astype('uint8'))
         img.save('res-%06d.jpg' % (self.total_step))
