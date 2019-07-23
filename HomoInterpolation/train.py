@@ -48,7 +48,7 @@ class Program(object):
         MSE_criterion = nn.MSELoss().to(device)
         BCE_criterion = nn.BCEWithLogitsLoss(reduction='mean').to(device)
 
-        full_strenth = torch.ones(self.batch_size, self.attr_n).to(device)
+        full_strenth = torch.ones(self.attr_n, self.batch_size).to(device)
         """load data there"""
         dataset = DataLoader(self.dataset, batch_size=self.batch_size, shuffle=True, num_workers=4)
         fixData = DataLoader(self.dataset, batch_size=self.fixedlen, shuffle=False, num_workers=4)
@@ -65,7 +65,7 @@ class Program(object):
                 images = images.float().to(device)
                 attr = attr.float().to(device)
 
-                strength = torch.rand(attr.size(0), images.size(0)).to(device)
+                strength = torch.rand(self.attr_n, self.batch_size).to(device)
                 perm = torch.randperm(self.batch_size).to(device)
 
                 real_F = self.E(images)
@@ -190,13 +190,14 @@ class Program(object):
         tt = []
         for i in range(rg):
             for j in range(self.attr_n):
-                str = torch.zeros((1, self.attr_n))
-                tmp = [self.fixedImgs[i]]
-                print(self.fixedImgs.size(), self.fixedImgs[i].size())
+                tmp = []
+                tmp.append(self.fixedImgs[i].detach().numpy().transpose(1, 2, 0))
+                str = torch.zeros(self.attr_n, 1).to(self.device)
                 for _k in range(5):
-                    k = _k / 5
-                    str[0][j] = k
+                    k = 0.3 * _k
+                    str[j][0] = k
                     res = self.run(self.fixedImgs[i], self.fixedImgs[i + 1], str)
+                    str[j][0] = 0
                     res.squeeze_()
                     res = res.detach().numpy().transpose(1, 2, 0)
                     tmp.append(res)

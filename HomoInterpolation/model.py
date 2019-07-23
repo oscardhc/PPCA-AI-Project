@@ -65,7 +65,8 @@ class Interp(nn.Module):
         x = fA
         for i in range(self.attr_n):
             k = strenth[i]
-            k = k.unsequeeze(2).expand_as(fA)
+            print(k.size(), fA.size())
+            k = k.unsqueeze(1).unsqueeze(2).unsqueeze(3).expand_as(fA)
             x = x + self.interp_set[i](fB - fA) * k
         return x
 
