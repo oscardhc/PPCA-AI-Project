@@ -14,7 +14,7 @@ class Program(object):
         super().__init__()
         self.epoch = 100
         self.batch_size = 16
-        self.feat_n = len(attr)
+        self.attr_n = len(attr)
         self.batch_penalty = 1
         self.imgsize = imgsize
 
@@ -24,8 +24,8 @@ class Program(object):
 
         self.E = m.Encoder().to(device)
         self.D = m.Decoder().to(device)
-        self.dis = m.Discriminator(self.feat_n).to(device)
-        self.I = m.Interp(self.feat_n).to(device)
+        self.dis = m.Discriminator(self.attr_n).to(device)
+        self.I = m.Interp(self.attr_n).to(device)
         self.P = m.KG().to(device)
         self.Teacher = m.VGG().to(device)
 
@@ -48,7 +48,7 @@ class Program(object):
         MSE_criterion = nn.MSELoss().to(device)
         BCE_criterion = nn.BCEWithLogitsLoss(reduction='mean').to(device)
 
-        full_strenth = torch.ones(self.batch_size, self.feat_n).to(device)
+        full_strenth = torch.ones(self.batch_size, self.attr_n).to(device)
         """load data there"""
         dataset = DataLoader(self.dataset, batch_size=self.batch_size, shuffle=True, num_workers=4)
         fixData = DataLoader(self.dataset, batch_size=self.fixedlen, shuffle=False, num_workers=4)
@@ -65,7 +65,7 @@ class Program(object):
                 images = images.float().to(device)
                 attr = attr.float().to(device)
 
-                strength = torch.rand(images.size(0), attr.size(0)).to(device)
+                strength = torch.rand(attr.size(0), images.size(0)).to(device)
                 perm = torch.randperm(self.batch_size).to(device)
 
                 real_F = self.E(images)
@@ -77,7 +77,7 @@ class Program(object):
                 for att in attr:
                     perm_attr += [att[perm]]
                 for i, (att, perm_att) in enumerate(zip(attr, perm_attr)):
-                    interp_attr += [att + strength[:, i:i + 1] * (perm_att - att)]
+                    interp_attr += [att + strength[i] * (perm_att - att)]
 
                 E_optim.zero_grad()
                 D_optim.zero_grad()
@@ -189,8 +189,8 @@ class Program(object):
         rg = len(self.fixedImgs) - 1
         tt = []
         for i in range(rg):
-            for j in range(self.feat_n):
-                str = torch.zeros((1, self.feat_n))
+            for j in range(self.attr_n):
+                str = torch.zeros((1, self.attr_n))
                 tmp = [self.fixedImgs[i]]
                 print(self.fixedImgs.size(), self.fixedImgs[i].size())
                 for _k in range(5):

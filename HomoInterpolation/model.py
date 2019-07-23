@@ -6,8 +6,9 @@ from collections import OrderedDict
 
 
 class Discriminator(nn.Module):
-    def __init__(self, attr):
+    def __init__(self, attr_n):
         super(Discriminator, self).__init__()
+        self.attr_n = attr_n
         self.dis = nn.Sequential(
             nn.Conv2d(512, 256, 1), 
             nn.InstanceNorm2d(256, affine=True), 
@@ -21,19 +22,14 @@ class Discriminator(nn.Module):
             nn.Conv2d(256, 256, 2, 1)
         )
         self.critic = nn.Conv2d(256, 256, 1, 1)
-        self.homo = []
-        for att in attr:
-            self.homo += [nn.Conv2d(256, att, 1, 1)]
+        self.homo = nn.Conv2d(256, self.attr_n, 1, 1)
 
     def forward(self, feat):
         tmp = self.dis(feat)
         crit = self.critic(tmp)
-        homo_attr_out = []
-        for homo_net in self.homo:
-            temp = homo_net(tmp)
-            temp = temp.squeeze()
-            homo_attr_out += [temp]
-        return crit, homo_attr_out
+        hom = self.homo(tmp)
+        hom = hom.squeeze().transpose(1, 0)
+        return crit, hom
 
 
 class Encoder(nn.Module):
@@ -49,11 +45,11 @@ class Encoder(nn.Module):
 
 
 class Interp(nn.Module):
-    def __init__(self, feature_num):
+    def __init__(self, attr_n):
         super(Interp, self).__init__()
-        self.feat_n = feature_num
+        self.attr_n = attr_n
         self.interp_set = []
-        for i in range(feature_num):
+        for i in range(attr_n):
             model = []
             for _ in range(2):
                 model = model + [
@@ -65,10 +61,12 @@ class Interp(nn.Module):
 
         self.interp_set = nn.ModuleList(self.interp_set)
         
-    def forward(self, fA, fB, str):
+    def forward(self, fA, fB, strenth):
         x = fA
-        for i in range(self.feat_n):
-            x = x + self.interp_set[i](fB - fA)
+        for i in range(self.attr_n):
+            k = strenth[i]
+            k = k.unsequeeze(2).expand_as(fA)
+            x = x + self.interp_set[i](fB - fA) * k
         return x
 
 
