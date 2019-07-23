@@ -231,7 +231,7 @@ class Program(object):
                     res = self.run(self.fixedImgs[i].to(self.device), self.fixedImgs[i + 1].to(self.device), str)
                     str[j][0] = 0
                     res.squeeze_()
-                    res = res.detach().numpy().transpose(1, 2, 0)
+                    res = res.detach().cpu().numpy().transpose(1, 2, 0)
                     tmp.append(res)
                 tmp.append(self.fixedImgs[i + 1].detach().numpy().transpose(1, 2, 0))
                 tt.append(np.hstack(tmp))
