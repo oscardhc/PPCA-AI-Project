@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader
 import numpy as np
 from PIL import Image
 from tqdm import tqdm
+import tensorboardX
 
 
 class Program(object):
@@ -45,6 +46,9 @@ class Program(object):
         self._train(self.device)
 
     def _train(self, device):
+
+        wr = tensorboardX.SummaryWriter('./log', flush_secs=2)
+
         E_optim = optim.Adam(self.E.parameters(), lr=0.0002)
         D_optim = optim.Adam(self.D.parameters(), lr=0.0002)
         dis_optim = optim.Adam(self.dis.parameters(), lr=0.0002)
@@ -187,6 +191,10 @@ class Program(object):
                 process.update(1)
                 process.set_description('[%d] D:%.3f DIS:%.3f VGG:%.3f EI:%.3f' % (
                 ep, D_loss.item(), dis_loss.item(), vgg_loss.item(), EI_loss.item()))
+                wr.add_scalar('scalar/D', D_loss.item(), self.total_step)
+                wr.add_scalar('scalar/DIS', dis_loss.item(), self.total_step)
+                wr.add_scalar('scalar/VGG', vgg_loss.item(), self.total_step)
+                wr.add_scalar('scalar/EI', EI_loss.item(), self.total_step)
 
 
     def save_model(self):
