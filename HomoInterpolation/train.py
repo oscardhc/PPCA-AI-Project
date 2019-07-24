@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import model as m
-from dataset import CelebADataset
+from dataset import *
 from torch.utils.data import DataLoader
 import numpy as np
 from PIL import Image
@@ -15,7 +15,7 @@ class Program(object):
     def __init__(self, imgsize, device, attr, toLoad, onServer, attrGroup):
         super().__init__()
         self.epoch = 100
-        self.batch_size = 24
+        self.batch_size = 16
 
         self.attr_n = len(attr)
         self.attrGroup = attrGroup
@@ -23,8 +23,6 @@ class Program(object):
         self.batch_penalty = 4
         self.imgsize = imgsize
 
-        self.fixedImgs = []
-        self.fixedlen = 3
         self.total_step = 0
 
         self.E = m.Encoder(
@@ -46,6 +44,10 @@ class Program(object):
                                      self.imgsize, attr)
         self.device = device
 
+        self.fixedImgs = getTestImages(
+            '/home/oscar/dhc/test-dataset' if onServer else '/Users/oscar/Downloads/test-dataset', 128)
+        self.fixedlen = len(self.fixedImgs)
+
     def train(self):
         self._train(self.device)
 
@@ -65,11 +67,6 @@ class Program(object):
         full_strenth = torch.ones(self.attr_n, self.batch_size).to(device)
         """load data there"""
         dataset = DataLoader(self.dataset, batch_size=self.batch_size, shuffle=True, num_workers=4)
-        fixData = DataLoader(self.dataset, batch_size=self.fixedlen, shuffle=False, num_workers=4)
-
-        for _, (img, _) in enumerate(fixData):
-            self.fixedImgs = img.float()
-            break
 
         for ep in range(self.epoch):
             process = tqdm(total=(len(dataset)))
@@ -229,18 +226,21 @@ class Program(object):
         return self.D(feat_interp)
 
     def showResult(self):
+        random.shuffle(self.fixedImgs)
         rg = len(self.fixedImgs) - 1
         tt = []
         for i in range(rg):
             for ll, rr in self.attrGroup:
                 tmp = []
-                tmp.append(self.fixedImgs[i].detach().numpy().transpose(1, 2, 0))
+                tmp.append(self.fixedImgs[i].transpose(1, 2, 0))
                 ste = torch.zeros(self.attr_n, 1).to(self.device)
-                for _k in range(5):
-                    k = 0.3 * _k
+                for _k in range(8):
+                    k = 0.2 * _k
                     for j in range(ll, rr):
                         ste[j][0] = k
-                    res = self.run(self.fixedImgs[i].to(self.device), self.fixedImgs[i + 1].to(self.device), ste)
+                    res = self.run(torch.tensor(self.fixedImgs[i]).to(self.device),
+                                   torch.tensor(self.fixedImgs[i + 1]).to(self.device),
+                                   ste)
                     for j in range(ll, rr):
                         ste[j][0] = 0
                     res.squeeze_()

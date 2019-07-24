@@ -46,7 +46,7 @@ class CelebADataset(torch.utils.data.Dataset):
         if self.orit[index] == 'right':
             img = img.transpose(Image.FLIP_LEFT_RIGHT)
 
-        img = img.resize((self.picSize, self.picSize))
+        img = img.resize((self.picSize, self.picSize), Image.ANTIALIAS)
         return (np.array(img) / 255.0).transpose(2, 0, 1)
 
     def __getitem__(self, item):
@@ -55,3 +55,18 @@ class CelebADataset(torch.utils.data.Dataset):
         :return: (picture(numpy 3 * sz * sz), feat(numpy num))
         """
         return self.getImage(item), self.attr[item]
+
+
+def getTestImages(path, size=128):
+    files = sorted(glob.glob((path + '/*.*')))
+    ret = []
+    for file in files:
+        img = Image.open(file)
+
+        W, H = img.size
+        bnd = (H - W) // 2
+        img = img.crop((0, bnd, W, W))
+
+        img = img.resize(size, Image.ANTIALIAS)
+        ret += [(np.array(img) / 255.0).transpose(2, 0, 1)]
+    return ret
