@@ -30,7 +30,7 @@ class Program(object):
             device)
         self.D = m.Decoder().to(device)
         self.dis = m.Discriminator(self.attr_n).to(device)
-        self.I = m.Interp(self.attr_n).to(device)
+        self.I = m.Interp(self.attr_n + 1).to(device)
         self.P = m.KG().to(device)
         self.Teacher = m.VGG(
             path='/home/oscar/dhc/HomoInterpGAN/checkpoints/vgg/vgg.pth' if onServer else '/Users/oscar/Downloads/vgg/vgg.pth').to(
@@ -45,8 +45,11 @@ class Program(object):
         self.device = device
 
         self.fixedImgs = getTestImages(
-            '/home/oscar/dhc/test-dataset' if onServer else '/Users/oscar/Downloads/test-dataset', 128)
-        self.fixedlen = len(self.fixedImgs)
+            '/home/oscar/dhc/medium' if onServer else '/Users/oscar/Downloads/test-dataset', 128, cut=True)
+        self.fixedfix = getTestImages(
+            '/home/oscar/dhc/fixed' if onServer else '/Users/oscar/Downloads/test-dataset', 128)
+        
+        self.fixedlen = len(self.fixedImgs) + len(self.fixedfix)
 
     def train(self):
         self._train(self.device)
@@ -64,7 +67,7 @@ class Program(object):
         MSE_criterion = nn.MSELoss().to(device)
         BCE_criterion = nn.BCEWithLogitsLoss().to(device)
 
-        full_strenth = torch.ones(self.attr_n, self.batch_size).to(device)
+        full_strenth = torch.ones(self.attr_n + 1, self.batch_size).to(device)
         """load data there"""
         dataset = DataLoader(self.dataset, batch_size=self.batch_size, shuffle=True, num_workers=4)
 
@@ -76,7 +79,7 @@ class Program(object):
                 images = images.float().to(device)
                 attr = attr.float().to(device)
 
-                strength = torch.rand(self.attr_n, self.batch_size).to(device)
+                strength = torch.rand(self.attr_n + 1, self.batch_size).to(device)
                 perm = torch.randperm(self.batch_size).to(device)
 
                 real_F = self.E(images)
@@ -180,13 +183,13 @@ class Program(object):
                     E_optim.step()
                     I_optim.step()
 
-                if self.total_step % 1000 == 0:
-                    self.save_model()
-                    """out put some information about the status there"""
-
                 if self.total_step % 100 == 0:
                     self.showResult()
                     """test the result of the net there"""
+
+                if self.total_step % 1000 == 0:
+                    self.save_model()
+                    """out put some information about the status there"""
 
                 self.total_step += 1
                 process.update(1)
@@ -225,29 +228,35 @@ class Program(object):
         feat_interp = self.I(featA, featB, strength)
         return self.D(feat_interp)
 
-    def showResult(self):
-        random.shuffle(self.fixedImgs)
-        rg = len(self.fixedImgs) - 1
+    def showArray(self, arr):
         tt = []
+        rg = len(arr) - 1
         for i in range(rg):
             for ll, rr in self.attrGroup:
                 tmp = []
-                tmp.append(self.fixedImgs[i].transpose(1, 2, 0))
-                ste = torch.zeros(self.attr_n, 1).to(self.device)
+                tmp.append(arr[i].transpose(1, 2, 0))
+                ste = torch.zeros(self.attr_n + 1, 1).to(self.device)
                 for _k in range(8):
                     k = 0.2 * _k
                     for j in range(ll, rr):
                         ste[j][0] = k
-                    res = self.run(torch.tensor(self.fixedImgs[i]).to(self.device),
-                                   torch.tensor(self.fixedImgs[i + 1]).to(self.device),
+                    res = self.run(torch.tensor(arr[i]).float().to(self.device),
+                                   torch.tensor(arr[i + 1]).float().to(self.device),
                                    ste)
                     for j in range(ll, rr):
                         ste[j][0] = 0
                     res.squeeze_()
                     res = res.detach().cpu().numpy().transpose(1, 2, 0)
                     tmp.append(res)
-                tmp.append(self.fixedImgs[i + 1].detach().numpy().transpose(1, 2, 0))
+                tmp.append(arr[i + 1].transpose(1, 2, 0))
                 tt.append(np.hstack(tmp))
+        return tt
+    
+    def showResult(self):
+        random.shuffle(self.fixedImgs)
+        tt = []
+        tt += self.showArray(self.fixedImgs)
+        tt += self.showArray(self.fixedfix)
         ary = np.vstack(tt)
         img = Image.fromarray((ary * 255).astype('uint8'))
         img.save('res-%06d.jpg' % self.total_step)

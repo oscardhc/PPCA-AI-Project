@@ -57,16 +57,18 @@ class CelebADataset(torch.utils.data.Dataset):
         return self.getImage(item), self.attr[item]
 
 
-def getTestImages(path, size=128):
+def getTestImages(path, size=128, cut=False):
     files = sorted(glob.glob((path + '/*.*')))
+    print(path, files)
     ret = []
     for file in files:
         img = Image.open(file)
 
-        W, H = img.size
-        bnd = (H - W) // 2
-        img = img.crop((0, bnd, W, W))
+        if cut:
+            W, H = img.size
+            bbb = W // 4
+            img = img.crop((bbb * 2 // 3, bbb // 4, W - bbb, W - bbb))
 
-        img = img.resize(size, Image.ANTIALIAS)
+        img = img.resize((size, size), Image.ANTIALIAS)
         ret += [(np.array(img) / 255.0).transpose(2, 0, 1)]
     return ret
