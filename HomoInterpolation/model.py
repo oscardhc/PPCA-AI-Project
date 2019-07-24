@@ -6,7 +6,7 @@ from collections import OrderedDict
 
 
 class Discriminator(nn.Module):
-    def __init__(self, attr_n):
+    def __init__(self, attr):
         super(Discriminator, self).__init__()
         self.attr_n = attr_n
         self.dis = nn.Sequential(
@@ -22,13 +22,17 @@ class Discriminator(nn.Module):
             nn.Conv2d(256, 256, 2, 1)
         )
         self.critic = nn.Conv2d(256, 256, 1, 1)
-        self.homo = nn.Conv2d(256, self.attr_n, 1, 1)
+        self.homo = []
+        for att in attr:
+            self.homo += [nn.Conv2d(256, att, 1, 1)]
 
     def forward(self, feat):
         tmp = self.dis(feat)
         crit = self.critic(tmp)
-        hom = self.homo(tmp)
-        hom = hom.squeeze().transpose(1, 0)
+        hom = []
+        for hom_net in self.homo:
+            temp = hom_net(tmp).squeeze()
+            hom += [temp]
         return crit, hom
 
 
@@ -63,10 +67,9 @@ class Interp(nn.Module):
         
     def forward(self, fA, fB, strenth):
         x = fA
+        strenth = strenth.unsqueeze(2).unsqueeze(3).expand((-1, -1, fA.size(2), fA.size(3)))
         for i in range(self.attr_n):
-            k = strenth[i]
-            k = k.unsqueeze(1).unsqueeze(2).unsqueeze(3).expand_as(fA)
-            x = x + self.interp_set[i](fB - fA) * k
+            x = x + self.interp_set[i](fB - fA) * strenth[:, i:i + 1, :, :]
         return x
 
 

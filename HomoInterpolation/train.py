@@ -26,8 +26,9 @@ class Program(object):
             path='/home/oscar/dhc/HomoInterpGAN/checkpoints/vgg/vgg.pth' if onServer else '/Users/oscar/Downloads/vgg/vgg.pth').to(
             device)
         self.D = m.Decoder().to(device)
-        self.dis = m.Discriminator(self.attr_n).to(device)
-        self.I = m.Interp(self.attr_n).to(device)
+        self.dis = m.Discriminator(attr).to(device)
+        # mention that the attr is an 1-dim numpy
+        self.I = m.Interp(self.attr_n + 1).to(device)
         self.P = m.KG().to(device)
         self.Teacher = m.VGG(
             path='/home/oscar/dhc/HomoInterpGAN/checkpoints/vgg/vgg.pth' if onServer else '/Users/oscar/Downloads/vgg/vgg.pth').to(
@@ -66,13 +67,13 @@ class Program(object):
         for ep in range(self.epoch):
             process = tqdm(total=(len(dataset)))
             for t, (images, attr) in enumerate(dataset):
-                attr = attr.transpose(1, 0)
+                # mention that the attribute from dataloader needs to be rewrite as:[group_number, batch_size, attribute_number]
 
                 images = images.float().to(device)
                 attr = attr.float().to(device)
 
-                strength = torch.rand(self.attr_n, self.batch_size).to(device)
-                perm = torch.randperm(self.batch_size).to(device)
+                strength = torch.rand(images.size(0), self.attr_n + 1).to(device)
+                perm = torch.randperm(images.size(0)).to(device)
 
                 real_F = self.E(images)
                 perm_F = real_F[perm]
@@ -83,7 +84,8 @@ class Program(object):
                 for att in attr:
                     perm_attr += [att[perm]]
                 for i, (att, perm_att) in enumerate(zip(attr, perm_attr)):
-                    interp_attr += [att + strength[i] * (perm_att - att)]
+                    interp_attr += [att + strength[:, i:i + 1] * (perm_att - att)]
+                    # maybe the size of the result needs to be output here to judge the rightness
 
                 E_optim.zero_grad()
                 D_optim.zero_grad()
@@ -94,7 +96,7 @@ class Program(object):
                 real_dec = self.D(real_F)
 
                 D_loss = MSE_criterion(real_dec, images.detach())
-                """another part of loss relys on the VGG network"""
+                """another part of loss relys on the VGG network.done."""
                 dgg_loss = MSE_criterion(self.Teacher(real_dec), self.Teacher(images))
                 D_loss += dgg_loss
                 D_loss.backward(retain_graph=True)
@@ -177,7 +179,7 @@ class Program(object):
 
                 if self.total_step % 1000 == 0:
                     self.save_model()
-                    """out put some information about the status there"""
+                    """out put some information about the status there."""
 
                 if self.total_step % 100 == 0:
                     self.showResult()
