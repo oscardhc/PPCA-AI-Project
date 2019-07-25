@@ -24,8 +24,9 @@ class CelebADataset(torch.utils.data.Dataset):
             info = csv.DictReader(f)
             for row in info:
                 cur = []
-                for attr_name in attr:
-                    cur.append(0 if row[attr_name] == '-1' else 1)
+                for group in attr:
+                    for att in group:
+                        cur.append(0 if row[att] == '-1' else 1)
                 self.attr.append(np.array(cur))
                 self.name.append(row['name'])
                 self.orit.append(row['orientation'])
@@ -38,12 +39,17 @@ class CelebADataset(torch.utils.data.Dataset):
     def getImage(self, index):
         img = Image.open(self.path + '/' + self.name[index])
 
+        B = []
+        for _ in range(4):
+            B.append(np.random.randint(0, 5))
+        W, H = img.size
+        img = img.crop((B[0], B[1], W - B[2], H - B[3]))
         W, H = img.size
         bnd = (H - W) // 2
         img = img.crop((0, bnd, W, W))
 
         'TODO: face orientation'
-        if self.orit[index] == 'right':
+        if self.orit[index] == 'left':
             img = img.transpose(Image.FLIP_LEFT_RIGHT)
 
         img = img.resize((self.picSize, self.picSize), Image.ANTIALIAS)

@@ -12,13 +12,16 @@ import tensorboardX
 
 class Program(object):
 
-    def __init__(self, imgsize, device, attr, toLoad, onServer, attrGroup):
+    def __init__(self, imgsize, device, attr, toLoad, onServer):
         super().__init__()
         self.epoch = 100
         self.batch_size = 16
 
+        self.attrName = attr
+        self.attr = []
+        for group in self.attrName:
+            self.attr.append(len(group))
         self.attr_n = len(attr)
-        self.attrGroup = attrGroup
 
         self.batch_penalty = 4
         self.imgsize = imgsize
@@ -42,7 +45,7 @@ class Program(object):
 
         self.dataset = CelebADataset(192000,
                                      '/home/oscar/dhc/celeba-dataset' if onServer else '/Users/oscar/Downloads/celeba-dataset',
-                                     self.imgsize, attr)
+                                     self.imgsize, self.attrName)
         self.device = device
 
         self.fixedImgs = getTestImages(
@@ -93,6 +96,7 @@ class Program(object):
                     perm_attr += [att[perm]]
                 for i, (att, perm_att) in enumerate(zip(attr, perm_attr)):
                     interp_attr += [att + strength[:, i:i + 1] * (perm_att - att)]
+                    print(strength[:, i:i + 1].size(), perm_att.size(), att.size())
                     # maybe the size of the result needs to be output here to judge the rightness
 
                 E_optim.zero_grad()
@@ -141,7 +145,7 @@ class Program(object):
                 for real_att, interp_homo_att in zip(tmp_real_attr, interp_homo_attr):
                     cl_loss += BCE_criterion(interp_homo_att, real_att) / real_att.size(0)
                 dis_loss += cl_loss
-                """calculate the classfication loss there. done"""
+                """calculate the classification loss there. done"""
                 dis_loss.backward(retain_graph=True)
                 dis_optim.step()
 
@@ -171,7 +175,7 @@ class Program(object):
                     for interp_att, homo_att in zip(tmp_interp_attr, interp_homo_attr):
                         cl_loss += BCE_criterion(homo_att, interp_att) / homo_att.size(0)
                     EI_loss += cl_loss
-                    """calculate the classfication loss here. done"""
+                    """calculate the classification loss here. done"""
                     total_interp_F = self.I(real_F.detach(), perm_F.detach(), full_strenth)
                     EI_loss += MSE_criterion(total_interp_F, perm_F.detach())
                     EI_real_dec = self.D(real_F)
@@ -234,24 +238,21 @@ class Program(object):
         tt = []
         rg = len(arr) - 1
         for i in range(rg):
-            for ll, rr in self.attrGroup:
-                tmp = []
-                tmp.append(arr[i].transpose(1, 2, 0))
-                ste = torch.zeros(self.attr_n + 1, 1).to(self.device)
-                for _k in range(8):
-                    k = 0.2 * _k
-                    for j in range(ll, rr):
-                        ste[j][0] = k
+            ste = torch.zeros(self.attr_n + 1, 1).to(self.device)
+            tmp = []
+            tmp.append(arr[i].transpose(1, 2, 0))
+            for j in range(self.attr_n + 1):
+                for _k in range(3):
+                    k = 0.5 * _k
+                    ste[j][0] = k
                     res = self.run(torch.tensor(arr[i]).float().to(self.device),
                                    torch.tensor(arr[i + 1]).float().to(self.device),
                                    ste)
-                    for j in range(ll, rr):
-                        ste[j][0] = 0
                     res.squeeze_()
                     res = res.detach().cpu().numpy().transpose(1, 2, 0)
                     tmp.append(res)
-                tmp.append(arr[i + 1].transpose(1, 2, 0))
-                tt.append(np.hstack(tmp))
+            tmp.append(arr[i + 1].transpose(1, 2, 0))
+            tt.append(np.hstack(tmp))
         return tt
     
     def showResult(self):
