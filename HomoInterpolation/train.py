@@ -78,10 +78,7 @@ class Program(object):
 
         for ep in range(self.epoch):
             process = tqdm(total=(len(dataset)))
-            for t, (images, attr) in enumerate(dataset):
-                # mention that the attribute from dataloader needs to be rewrite as:[group_number, batch_size, attribute_number]
-                
-                
+            for t, (images, attr) in enumerate(dataset):            
                 images = images.float().to(device)
                 attr = [aa.to(device) for aa in attr]
 
@@ -98,7 +95,7 @@ class Program(object):
                     perm_attr += [att[perm]]
                 for i, (att, perm_att) in enumerate(zip(attr, perm_attr)):
                     interp_attr += [att + strength[:, i:i + 1] * (perm_att - att)]
-
+                """run the network above"""
                 E_optim.zero_grad()
                 D_optim.zero_grad()
                 dis_optim.zero_grad()
@@ -108,9 +105,10 @@ class Program(object):
                 real_dec = self.D(real_F)
 
                 D_loss = MSE_criterion(real_dec, images.detach())
-                """another part of loss relys on the VGG network.done."""
+                """calculate the reconstruction loss above"""
                 dgg_loss = MSE_criterion(self.Teacher(real_dec), self.Teacher(images))
                 D_loss += dgg_loss
+                """calculate the perceptural loss above"""
                 D_loss.backward(retain_graph=True)
                 D_optim.step()
 
@@ -123,8 +121,7 @@ class Program(object):
                 real_critc, real_attr = self.dis(real_F.detach())
                 interp_critic, interp_homo_attr = self.dis(interp_F.detach())
                 dis_loss = (interp_critic - real_critc).mean()
-
-                """calculate the gradient penalty there.done."""
+                """calculate the WGAN loss above"""
                 alpha = torch.tensor(np.random.random((real_critc.size(0), 1, 1, 1))).float().to(device)
                 mid_F = real_F + alpha * (interp_F - real_F)
                 mid_F.requires_grad_(True)
@@ -139,13 +136,13 @@ class Program(object):
                 )[0].view(real_critc.size(0), -1)
                 gp_loss = 100 * ((grad.norm(2, dim=1) - 1) ** 2).mean()
                 dis_loss += gp_loss
-
+                """calculate the gradient penalty above"""
                 cl_loss = 0
                 tmp_real_attr = [att.detach() for att in attr]
                 for real_att, interp_homo_att in zip(tmp_real_attr, interp_homo_attr):
                     cl_loss += BCE_criterion(interp_homo_att, real_att) / (real_att.size(1) * real_att.size(0))
                 dis_loss += cl_loss
-                """calculate the classification loss there. done"""
+                """calculate the classification loss above"""
                 dis_loss.backward(retain_graph=True)
                 dis_optim.step()
 
@@ -159,7 +156,7 @@ class Program(object):
                 vgg_loss = MSE_criterion(vgg_feat, self.P(real_F.detach()))
                 vgg_loss.backward()
                 P_optim.step()
-                """calculate the KG loss by using VGG as the teacher here and modify the network.done"""
+                """calculate the KG loss above"""
 
                 if t % self.batch_penalty == 0:
                     E_optim.zero_grad()
@@ -170,20 +167,25 @@ class Program(object):
 
                     interp_critic, interp_homo_attr = self.dis(interp_F)
                     EI_loss = -interp_critic.mean()
+                    """calculate the WGAN loss above"""
                     cl_loss = 0
                     tmp_interp_attr = [att.detach() for att in interp_attr]
                     for interp_att, homo_att in zip(tmp_interp_attr, interp_homo_attr):
                         cl_loss += BCE_criterion(homo_att, interp_att) / (homo_att.size(1) * homo_att.size(0))
                     EI_loss += cl_loss
-                    """calculate the classification loss here. done"""
+                    """calculate the classification loss above"""
                     total_interp_F = self.I(real_F.detach(), perm_F.detach(), full_strenth)
                     EI_loss += MSE_criterion(total_interp_F, perm_F.detach())
+                    """calculate the interpolation loss above"""
                     EI_real_dec = self.D(real_F)
                     EI_loss += MSE_criterion(EI_real_dec, images.detach())
+                    """calculate the reconstruction loss above"""
                     EI_vgg_feat = self.Teacher(images).detach()
                     EI_vgg_loss = MSE_criterion(EI_vgg_feat, self.P(real_F))
                     EI_loss += EI_vgg_loss
+                    """calculate the homomorphic gap above"""
                     EI_loss += MSE_criterion(self.Teacher(EI_real_dec), self.Teacher(images.detach()))
+                    """calculate the KG loss above"""
                     EI_loss.backward()
 
                     E_optim.step()
