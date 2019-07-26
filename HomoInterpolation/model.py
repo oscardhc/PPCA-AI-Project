@@ -8,7 +8,7 @@ from collections import OrderedDict
 class Discriminator(nn.Module):
     def __init__(self, attr):
         super(Discriminator, self).__init__()
-        self.attr_n = attr_n
+        self.attr_n = len(attr)
         self.dis = nn.Sequential(
             nn.Conv2d(512, 256, 1), 
             nn.InstanceNorm2d(256, affine=True), 
@@ -22,16 +22,18 @@ class Discriminator(nn.Module):
             nn.Conv2d(256, 256, 2, 1)
         )
         self.critic = nn.Conv2d(256, 256, 1, 1)
-        self.homo = []
+        homo = []
         for att in attr:
-            self.homo += [nn.Conv2d(256, att, 1, 1)]
+            homo += [nn.Conv2d(256, att, 1, 1)]
+        self.homo = nn.ModuleList(homo)
 
     def forward(self, feat):
         tmp = self.dis(feat)
         crit = self.critic(tmp)
         hom = []
         for hom_net in self.homo:
-            temp = hom_net(tmp).squeeze()
+            temp = hom_net(tmp)
+            temp = temp.view(temp.size(0), temp.size(1))
             hom += [temp]
         return crit, hom
 

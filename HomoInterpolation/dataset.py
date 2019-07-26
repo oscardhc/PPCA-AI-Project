@@ -25,9 +25,11 @@ class CelebADataset(torch.utils.data.Dataset):
             for row in info:
                 cur = []
                 for group in attr:
+                    ccc = []
                     for att in group:
-                        cur.append(0 if row[att] == '-1' else 1)
-                self.attr.append(np.array(cur))
+                        ccc.append(0 if row[att] == '-1' else 1)
+                    cur.append(np.array(ccc, dtype=np.float32))
+                self.attr.append(cur)
                 self.name.append(row['name'])
                 self.orit.append(row['orientation'])
                 if len(self.name) == self.num:
@@ -60,7 +62,8 @@ class CelebADataset(torch.utils.data.Dataset):
         :param item:index of the pic
         :return: (picture(numpy 3 * sz * sz), feat(numpy num))
         """
-        return self.getImage(item), self.attr[item]
+#         print(tuple(self.attr[item]))
+        return self.getImage(item), tuple(self.attr[item])
 
 
 def getTestImages(path, size=128, cut=False):

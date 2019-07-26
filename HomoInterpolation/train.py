@@ -15,13 +15,14 @@ class Program(object):
     def __init__(self, imgsize, device, attr, toLoad, onServer):
         super().__init__()
         self.epoch = 100
-        self.batch_size = 16
+        self.batch_size = 20
 
         self.attrName = attr
         self.attr = []
         for group in self.attrName:
             self.attr.append(len(group))
         self.attr_n = len(attr)
+        self.attrname = attr
 
         self.batch_penalty = 4
         self.imgsize = imgsize
@@ -32,7 +33,7 @@ class Program(object):
             path='/home/oscar/dhc/HomoInterpGAN/checkpoints/vgg/vgg.pth' if onServer else '/Users/oscar/Downloads/vgg/vgg.pth').to(
             device)
         self.D = m.Decoder().to(device)
-        self.dis = m.Discriminator(attr).to(device)
+        self.dis = m.Discriminator(self.attr).to(device)
         # mention that the attr is an 1-dim numpy
         self.I = m.Interp(self.attr_n + 1).to(device)
         self.P = m.KG().to(device)
@@ -71,7 +72,7 @@ class Program(object):
         MSE_criterion = nn.MSELoss().to(device)
         BCE_criterion = nn.BCEWithLogitsLoss().to(device)
 
-        full_strenth = torch.ones(self.attr_n + 1, self.batch_size).to(device)
+        full_strenth = torch.ones(self.batch_size, self.attr_n + 1).to(device)
         """load data there"""
         dataset = DataLoader(self.dataset, batch_size=self.batch_size, shuffle=True, num_workers=4)
 
@@ -79,9 +80,10 @@ class Program(object):
             process = tqdm(total=(len(dataset)))
             for t, (images, attr) in enumerate(dataset):
                 # mention that the attribute from dataloader needs to be rewrite as:[group_number, batch_size, attribute_number]
-
+                
+                
                 images = images.float().to(device)
-                attr = attr.float().to(device)
+                attr = [aa.to(device) for aa in attr]
 
                 strength = torch.rand(images.size(0), self.attr_n + 1).to(device)
                 perm = torch.randperm(images.size(0)).to(device)
@@ -96,8 +98,6 @@ class Program(object):
                     perm_attr += [att[perm]]
                 for i, (att, perm_att) in enumerate(zip(attr, perm_attr)):
                     interp_attr += [att + strength[:, i:i + 1] * (perm_att - att)]
-                    print(strength[:, i:i + 1].size(), perm_att.size(), att.size())
-                    # maybe the size of the result needs to be output here to judge the rightness
 
                 E_optim.zero_grad()
                 D_optim.zero_grad()
@@ -143,7 +143,7 @@ class Program(object):
                 cl_loss = 0
                 tmp_real_attr = [att.detach() for att in attr]
                 for real_att, interp_homo_att in zip(tmp_real_attr, interp_homo_attr):
-                    cl_loss += BCE_criterion(interp_homo_att, real_att) / real_att.size(0)
+                    cl_loss += BCE_criterion(interp_homo_att, real_att) / (real_att.size(1) * real_att.size(0))
                 dis_loss += cl_loss
                 """calculate the classification loss there. done"""
                 dis_loss.backward(retain_graph=True)
@@ -173,7 +173,7 @@ class Program(object):
                     cl_loss = 0
                     tmp_interp_attr = [att.detach() for att in interp_attr]
                     for interp_att, homo_att in zip(tmp_interp_attr, interp_homo_attr):
-                        cl_loss += BCE_criterion(homo_att, interp_att) / homo_att.size(0)
+                        cl_loss += BCE_criterion(homo_att, interp_att) / (homo_att.size(1) * homo_att.size(0))
                     EI_loss += cl_loss
                     """calculate the classification loss here. done"""
                     total_interp_F = self.I(real_F.detach(), perm_F.detach(), full_strenth)
@@ -238,13 +238,13 @@ class Program(object):
         tt = []
         rg = len(arr) - 1
         for i in range(rg):
-            ste = torch.zeros(self.attr_n + 1, 1).to(self.device)
+            ste = torch.zeros(1, self.attr_n + 1).to(self.device)
             tmp = []
             tmp.append(arr[i].transpose(1, 2, 0))
             for j in range(self.attr_n + 1):
                 for _k in range(3):
                     k = 0.5 * _k
-                    ste[j][0] = k
+                    ste[0][j] = k
                     res = self.run(torch.tensor(arr[i]).float().to(self.device),
                                    torch.tensor(arr[i + 1]).float().to(self.device),
                                    ste)
@@ -258,7 +258,7 @@ class Program(object):
     def showResult(self):
         random.shuffle(self.fixedImgs)
         tt = []
-        tt += self.showArray(self.fixedImgs)
+        tt += self.showArray(self.fixedImgs[0:10])
         tt += self.showArray(self.fixedfix)
         ary = np.vstack(tt)
         img = Image.fromarray((ary * 255).astype('uint8'))
