@@ -16,6 +16,8 @@ class Program(object):
         super().__init__()
         self.epoch = 100
         self.batch_size = 20
+        
+        self.sig = nn.Sigmoid()
 
         self.attrName = attr
         self.attr = []
@@ -24,7 +26,7 @@ class Program(object):
         self.attr_n = len(attr)
         self.attrname = attr
 
-        self.batch_penalty = 4
+        self.batch_penalty = 5
         self.imgsize = imgsize
 
         self.total_step = 0
@@ -209,56 +211,72 @@ class Program(object):
     def save_model(self):
         with open('mata.txt', 'w') as f:
             print(self.total_step, file=f)
-        torch.save(self.E.state_dict(), "encoder.pth")
-        torch.save(self.D.state_dict(), "decoder.pth")
-        torch.save(self.dis.state_dict(), "Discriminator.pth")
-        torch.save(self.I.state_dict(), "Interp.pth")
-        torch.save(self.P.state_dict(), "KG.pth")
+        torch.save(self.E.state_dict(), "encoder%d.pth" % self.total_step)
+        torch.save(self.D.state_dict(), "decoder%d.pth" % self.total_step)
+        torch.save(self.dis.state_dict(), "Discriminator%d.pth" % self.total_step)
+        torch.save(self.I.state_dict(), "Interp%d.pth" % self.total_step)
+        torch.save(self.P.state_dict(), "KG%d.pth" % self.total_step)
 
     def load_model(self):
         with open('mata.txt', 'r') as f:
             ar = f.read().split(' ')
             self.total_step = int(ar[0])
-        self.E.load_state_dict(torch.load("encoder.pth"))
-        self.D.load_state_dict(torch.load("decoder.pth"))
-        self.dis.load_state_dict(torch.load("Discriminator.pth"))
-        self.I.load_state_dict(torch.load("Interp.pth"))
-        self.P.load_state_dict(torch.load("KG.pth"))
+        self.E.load_state_dict(torch.load("encoder%d.pth" % self.total_step))
+        self.D.load_state_dict(torch.load("decoder%d.pth" % self.total_step))
+        self.dis.load_state_dict(torch.load("Discriminator%d.pth" % self.total_step))
+        self.I.load_state_dict(torch.load("Interp%d.pth" % self.total_step))
+        self.P.load_state_dict(torch.load("KG%d.pth" % self.total_step))
+        with open('structure.txt', 'w') as f:
+            print(self.E, file=f)
+            print(self.D, file=f)
+            print(self.dis, file=f)
+            print(self.I, file=f)
+            print(self.P, file=f)
 
-    def run(self, imageA, imageB, strength):
+    def run(self, imageA, imageB, strength, flag=True):
         """batch size!"""
         imageA = imageA.reshape((1, 3, self.imgsize, self.imgsize))
         imageB = imageB.reshape((1, 3, self.imgsize, self.imgsize))
         featA = self.E(imageA)
         featB = self.E(imageB)
-        feat_interp = self.I(featA, featB, strength)
+        if flag:
+            feat_interp = self.I(featA, featB, strength)
+        else:
+            feat_interp = featA
         return self.D(feat_interp)
 
     def showArray(self, arr):
         tt = []
         rg = len(arr) - 1
-        for i in range(rg):
-            ste = torch.zeros(1, self.attr_n + 1).to(self.device)
-            tmp = []
-            tmp.append(arr[i].transpose(1, 2, 0))
-            for j in range(self.attr_n + 1):
-                for _k in range(3):
-                    k = 0.5 * _k
-                    ste[0][j] = k
-                    res = self.run(torch.tensor(arr[i]).float().to(self.device),
-                                   torch.tensor(arr[i + 1]).float().to(self.device),
-                                   ste)
-                    res.squeeze_()
-                    res = res.detach().cpu().numpy().transpose(1, 2, 0)
-                    tmp.append(res)
-            tmp.append(arr[i + 1].transpose(1, 2, 0))
-            tt.append(np.hstack(tmp))
+        with torch.no_grad():
+            for i in range(rg):
+                ste = torch.zeros(1, self.attr_n + 1).to(self.device)
+                tmp = []
+                tmp.append(arr[i].transpose(1, 2, 0))
+                res = self.run(torch.tensor(arr[i]).float().to(self.device),
+                               torch.tensor(arr[i + 1]).float().to(self.device),
+                               ste, False)
+                res.squeeze_()
+                res = res.detach().cpu().numpy().transpose(1, 2, 0)
+                tmp.append(res)
+                for j in range(self.attr_n + 1):
+                    for _k in range(1, 2):
+                        k = 1.0 * _k
+                        ste[0][j] = k
+                        res = self.run(torch.tensor(arr[i]).float().to(self.device),
+                                       torch.tensor(arr[i + 1]).float().to(self.device),
+                                       ste)
+                        res.squeeze_()
+                        res = res.detach().cpu().numpy().transpose(1, 2, 0)
+                        tmp.append(res)
+                tmp.append(arr[i + 1].transpose(1, 2, 0))
+                tt.append(np.hstack(tmp))
         return tt
     
     def showResult(self):
         random.shuffle(self.fixedImgs)
         tt = []
-        tt += self.showArray(self.fixedImgs[0:10])
+        tt += self.showArray(self.fixedImgs[0:15])
         tt += self.showArray(self.fixedfix)
         ary = np.vstack(tt)
         img = Image.fromarray((ary * 255).astype('uint8'))

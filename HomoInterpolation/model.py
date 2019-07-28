@@ -100,7 +100,8 @@ class Decoder(nn.Module):
             ]
 
         model = model + [nn.Conv2d(64, 3, 3, 1, 1)]
-
+        model = model + [nn.Sigmoid()]
+        
         self.dec = nn.Sequential(*model)
 
     def forward(self, f):

@@ -14,6 +14,6 @@ if __name__ == '__main__':
             ['Big_Lips', 'Big_Nose', 'Chubby', 'Double_Chin', 'High_Cheekbones', 'Narrow_Eyes', 'Pointy_Nose'],
             ['Straight_Hair', 'Wavy_Hair'],
             ['Attractive', 'Pale_Skin', 'Heavy_Makeup']]
-    it = train.Program(imgsize=128, toLoad=False, device=device,
+    it = train.Program(imgsize=128, toLoad=True, device=device,
                        attr=attr, onServer=onServer)
     it.train()
