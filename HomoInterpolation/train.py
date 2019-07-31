@@ -36,7 +36,6 @@ class Program(object):
             device)
         self.D = m.Decoder().to(device)
         self.dis = m.Discriminator(self.attr).to(device)
-        # mention that the attr is an 1-dim numpy
         self.I = m.Interp(self.attr_n + 1).to(device)
         self.P = m.KG().to(device)
         self.Teacher = m.VGG(
@@ -104,7 +103,7 @@ class Program(object):
                 I_optim.zero_grad()
                 P_optim.zero_grad()
 
-                real_dec = self.D(real_F)
+                real_dec = self.D(real_F.detach())
 
                 D_loss = MSE_criterion(real_dec, images.detach())
                 """calculate the reconstruction loss above"""
@@ -180,13 +179,13 @@ class Program(object):
                     EI_loss += MSE_criterion(total_interp_F, perm_F.detach())
                     """calculate the interpolation loss above"""
                     EI_real_dec = self.D(real_F)
-                    EI_loss += MSE_criterion(EI_real_dec, images.detach())
+                    EI_loss += MSE_criterion(EI_real_dec, images)
                     """calculate the reconstruction loss above"""
                     EI_vgg_feat = self.Teacher(images).detach()
                     EI_vgg_loss = MSE_criterion(EI_vgg_feat, self.P(real_F))
                     EI_loss += EI_vgg_loss
                     """calculate the homomorphic gap above"""
-                    EI_loss += MSE_criterion(self.Teacher(EI_real_dec), self.Teacher(images.detach()))
+                    EI_loss += MSE_criterion(self.Teacher(EI_real_dec), self.Teacher(images))
                     """calculate the KG loss above"""
                     EI_loss.backward()
 
