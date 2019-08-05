@@ -10,15 +10,15 @@ class Discriminator(nn.Module):
         super(Discriminator, self).__init__()
         self.attr_n = len(attr)
         self.dis = nn.Sequential(
-            nn.Conv2d(512, 256, 1), 
-            nn.InstanceNorm2d(256, affine=True), 
-            nn.LeakyReLU(), 
-            nn.Conv2d(256, 256, 4, 2, 1), 
-            nn.InstanceNorm2d(256, affine=True), 
+            nn.Conv2d(512, 256, 1),
+            nn.InstanceNorm2d(256, affine=True),
             nn.LeakyReLU(),
-            nn.Conv2d(256, 256, 4, 2, 1), 
-            nn.InstanceNorm2d(256, affine=True), 
-            nn.LeakyReLU(), 
+            nn.Conv2d(256, 256, 4, 2, 1),
+            nn.InstanceNorm2d(256, affine=True),
+            nn.LeakyReLU(),
+            nn.Conv2d(256, 256, 4, 2, 1),
+            nn.InstanceNorm2d(256, affine=True),
+            nn.LeakyReLU(),
             nn.Conv2d(256, 256, 2, 1)
         )
         self.critic = nn.Conv2d(256, 256, 1, 1)
@@ -66,7 +66,7 @@ class Interp(nn.Module):
             self.interp_set = self.interp_set + [nn.Sequential(*model)]
 
         self.interp_set = nn.ModuleList(self.interp_set)
-        
+
     def forward(self, fA, fB, strenth):
         x = fA
         strenth = strenth.unsqueeze(2).unsqueeze(3).expand((-1, -1, fA.size(2), fA.size(3)))
@@ -80,32 +80,38 @@ class Decoder(nn.Module):
         super(Decoder, self).__init__()
         model = []
         ch = [512, 512, 256, 128, 64]
-        dep = [1, 3, 3, 1]
+        dep = [0, 3, 3, 1]
         for i in range(4):
             model = model + [
                 nn.Conv2d(ch[i], ch[i + 1], 3, 1, 1),
                 nn.BatchNorm2d(ch[i + 1]),
                 nn.ReLU()
             ]
-            for _ in range(dep[i] - 1):
+            for _ in range(dep[i]):
                 model = model + [
                     nn.Conv2d(ch[i + 1], ch[i + 1], 3, 1, 1),
                     nn.BatchNorm2d(ch[i + 1]),
                     nn.ReLU()
                 ]
-            model = model + [nn.Upsample(scale_factor=2),
-                nn.Conv2d(ch[i + 1], ch[i + 1], 3, 1, 1),
-                nn.BatchNorm2d(ch[i + 1]),
-                nn.ReLU()
-            ]
+            model = model + [nn.Upsample(scale_factor=2)]
 
-        model = model + [nn.Conv2d(64, 3, 3, 1, 1)]
-        model = model + [nn.Sigmoid()]
-        
-        self.dec = nn.Sequential(*model)
+        model = model + [
+            nn.Conv2d(64, 64, 3, 1, 1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            nn.Conv2d(64, 3, 3, 1, 1)
+        ]
+
+        self.model = nn.Sequential(*model)
+        sdict = torch.load('../input/predec/dec.pth')
+        self.load_state_dict(sdict)
+        self.sig = nn.Sequential(*[nn.Sigmoid()])
+
+    #         print(self)
 
     def forward(self, f):
-        x = self.dec(f)
+        x = self.model(f)
+        x = self.sig(x)
         return x
 
 
@@ -113,7 +119,7 @@ class KG(nn.Module):
     def __init__(self):
         super(KG, self).__init__()
         self.model = nn.Conv2d(512, 512, 1)
-    
+
     def forward(self, feat):
         x = self.model(feat)
         return x
@@ -129,15 +135,15 @@ class VGG(nn.Module):
         dep = [2, 2, 4, 4]
         for i in range(4):
             model.update(OrderedDict([
-                ('conv%d_%d' % (i+1, 1), nn.Conv2d(ch[i], ch[i + 1], 3, 1, 1)),
-                ('relu%d_%d' % (i+1, 1), nn.ReLU(inplace=True))
+                ('conv%d_%d' % (i + 1, 1), nn.Conv2d(ch[i], ch[i + 1], 3, 1, 1)),
+                ('relu%d_%d' % (i + 1, 1), nn.ReLU(inplace=True))
             ]))
             for j in range(dep[i] - 1):
                 model.update(OrderedDict([
-                    ('conv%d_%d' % (i+1, j+2), nn.Conv2d(ch[i + 1], ch[i + 1], 3, 1, 1)),
-                    ('relu%d_%d' % (i+1, j+2), nn.ReLU(inplace=True))
+                    ('conv%d_%d' % (i + 1, j + 2), nn.Conv2d(ch[i + 1], ch[i + 1], 3, 1, 1)),
+                    ('relu%d_%d' % (i + 1, j + 2), nn.ReLU(inplace=True))
                 ]))
-            model.update(OrderedDict([('pool%d' % (i+1), nn.MaxPool2d((2, 2)))]))
+            model.update(OrderedDict([('pool%d' % (i + 1), nn.MaxPool2d((2, 2)))]))
         model.update(OrderedDict([
             ('conv5_1', nn.Conv2d(512, 512, 3, 1, 1)),
             ('relu5_1', nn.ReLU(inplace=True))
@@ -157,5 +163,4 @@ class VGG(nn.Module):
         self.load_state_dict(sdict)
 
     def forward(self, x):
-        return self.model(x)
-
+        return self.model(x))

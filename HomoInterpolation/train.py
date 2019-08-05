@@ -14,9 +14,9 @@ class Program(object):
 
     def __init__(self, imgsize, device, attr, toLoad, onServer):
         super().__init__()
-        self.epoch = 100
-        self.batch_size = 20
-        
+        self.epoch = 3
+        self.batch_size = 48
+
         self.sig = nn.Sigmoid()
 
         self.attrName = attr
@@ -46,16 +46,31 @@ class Program(object):
             self.load_model()
 
         self.dataset = CelebADataset(192000,
-                                     '/home/oscar/dhc/celeba-dataset' if onServer else '/Users/oscar/Downloads/celeba-dataset',
+                                     '../input/align-celeba/dat/celeba-dataset' if onServer else '/Users/oscar/Downloads/celeba-dataset',
                                      self.imgsize, self.attrName)
         self.device = device
 
         self.fixedImgs = getTestImages(
-            '/home/oscar/dhc/medium' if onServer else '/Users/oscar/Downloads/test-dataset', 128, cut=True)
+            '../input/align-celeba/dat/medium' if onServer else '/Users/oscar/Downloads/test-dataset', 128, cut=True)
         self.fixedfix = getTestImages(
-            '/home/oscar/dhc/fixed' if onServer else '/Users/oscar/Downloads/test-dataset', 128)
-        
+            '../input/align-celeba/dat/fixed' if onServer else '/Users/oscar/Downloads/test-dataset', 128)
+
         self.fixedlen = len(self.fixedImgs) + len(self.fixedfix)
+
+        self.E = Encoder(
+            path='../input/pervgg/vgg/vgg/vgg.pth' if onServer else '/Users/oscar/Downloads/vgg/vgg.pth').to(
+            device)
+        self.D = Decoder().to(device)
+        self.dis = Discriminator(self.attr).to(device)
+        # mention that the attr is an 1-dim numpy
+        self.I = Interp(self.attr_n + 1).to(device)
+        self.P = KG().to(device)
+        self.Teacher = VGG(
+            path='../input/pervgg/vgg/vgg/vgg.pth' if onServer else '/Users/oscar/Downloads/vgg/vgg.pth').to(
+            device)
+
+        if toLoad:
+            self.load_model()
 
     def train(self):
         self._train(self.device)
@@ -64,18 +79,18 @@ class Program(object):
 
         wr = tensorboardX.SummaryWriter('./log', flush_secs=2)
 
-        E_optim = optim.Adam(self.E.parameters(), lr=0.0002)
-        D_optim = optim.Adam(self.D.parameters(), lr=0.0002)
-        dis_optim = optim.Adam(self.dis.parameters(), lr=0.0002)
-        I_optim = optim.Adam(self.I.parameters(), lr=0.0002)
-        P_optim = optim.Adam(self.P.parameters(), lr=0.0002)
+        E_optim = optim.Adam(self.E.parameters(), lr=0.0001, betas=(0.5, 0.999))
+        D_optim = optim.Adam(self.D.parameters(), lr=0.0001, betas=(0.5, 0.999))
+        dis_optim = optim.Adam(self.dis.parameters(), lr=0.0001, betas=(0.5, 0.999))
+        I_optim = optim.Adam(self.I.parameters(), lr=0.0001, betas=(0.5, 0.999))
+        P_optim = optim.Adam(self.P.parameters(), lr=0.0001, betas=(0.5, 0.999))
 
         MSE_criterion = nn.MSELoss().to(device)
         BCE_criterion = nn.BCEWithLogitsLoss().to(device)
 
         full_strenth = torch.ones(self.batch_size, self.attr_n + 1).to(device)
         """load data there"""
-        dataset = DataLoader(self.dataset, batch_size=self.batch_size, shuffle=True, num_workers=4)
+        dataset = DataLoader(self.dataset, batch_size=self.batch_size, shuffle=True, num_workers=16)
 
         for ep in range(self.epoch):
             process = tqdm(total=(len(dataset)))
@@ -141,7 +156,7 @@ class Program(object):
                 cl_loss = 0
                 tmp_real_attr = [att.detach() for att in attr]
                 for real_att, interp_homo_att in zip(tmp_real_attr, interp_homo_attr):
-                    cl_loss += BCE_criterion(interp_homo_att, real_att) / (real_att.size(1) * real_att.size(0))
+                    cl_loss += BCE_criterion(interp_homo_att, real_att) / (real_att.size(0))
                 dis_loss += cl_loss
                 """calculate the classification loss above"""
                 dis_loss.backward(retain_graph=True)
@@ -179,13 +194,13 @@ class Program(object):
                     EI_loss += MSE_criterion(total_interp_F, perm_F.detach())
                     """calculate the interpolation loss above"""
                     EI_real_dec = self.D(real_F)
-                    EI_loss += MSE_criterion(EI_real_dec, images)
+                    EI_loss += MSE_criterion(EI_real_dec, images.detach())
                     """calculate the reconstruction loss above"""
                     EI_vgg_feat = self.Teacher(images).detach()
                     EI_vgg_loss = MSE_criterion(EI_vgg_feat, self.P(real_F))
                     EI_loss += EI_vgg_loss
                     """calculate the homomorphic gap above"""
-                    EI_loss += MSE_criterion(self.Teacher(EI_real_dec), self.Teacher(images))
+                    EI_loss += MSE_criterion(self.Teacher(EI_real_dec), self.Teacher(images.detach()))
                     """calculate the KG loss above"""
                     EI_loss.backward()
 
@@ -210,23 +225,23 @@ class Program(object):
                 wr.add_scalar('scalar/EI', EI_loss.item(), self.total_step)
 
     def save_model(self):
+        print('saving model...')
         with open('mata.txt', 'w') as f:
             print(self.total_step, file=f)
-        torch.save(self.E.state_dict(), "encoder%d.pth" % self.total_step)
-        torch.save(self.D.state_dict(), "decoder%d.pth" % self.total_step)
-        torch.save(self.dis.state_dict(), "Discriminator%d.pth" % self.total_step)
-        torch.save(self.I.state_dict(), "Interp%d.pth" % self.total_step)
-        torch.save(self.P.state_dict(), "KG%d.pth" % self.total_step)
+        torch.save(self.E.state_dict(), "encoder.pth")
+        torch.save(self.D.state_dict(), "decoder.pth")
+        torch.save(self.dis.state_dict(), "Discriminator.pth")
+        torch.save(self.I.state_dict(), "Interp.pth")
+        torch.save(self.P.state_dict(), "KG.pth")
 
     def load_model(self):
-        with open('mata.txt', 'r') as f:
-            ar = f.read().split(' ')
-            self.total_step = int(ar[0])
-        self.E.load_state_dict(torch.load("encoder%d.pth" % self.total_step))
-        self.D.load_state_dict(torch.load("decoder%d.pth" % self.total_step))
-        self.dis.load_state_dict(torch.load("Discriminator%d.pth" % self.total_step))
-        self.I.load_state_dict(torch.load("Interp%d.pth" % self.total_step))
-        self.P.load_state_dict(torch.load("KG%d.pth" % self.total_step))
+        print('loading model...')
+        self.total_step = 160000
+        self.E.load_state_dict(torch.load("../input/mdl048/encoder.pth"))
+        self.D.load_state_dict(torch.load("../input/mdl048/decoder.pth"))
+        self.dis.load_state_dict(torch.load("../input/mdl048/Discriminator.pth"))
+        self.I.load_state_dict(torch.load("../input/mdl048/Interp.pth"))
+        self.P.load_state_dict(torch.load("../input/mdl048/KG.pth"))
         with open('structure.txt', 'w') as f:
             print(self.E, file=f)
             print(self.D, file=f)
@@ -273,7 +288,7 @@ class Program(object):
                 tmp.append(arr[i + 1].transpose(1, 2, 0))
                 tt.append(np.hstack(tmp))
         return tt
-    
+
     def showResult(self):
         random.shuffle(self.fixedImgs)
         tt = []

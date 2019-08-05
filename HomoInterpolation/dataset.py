@@ -9,6 +9,7 @@ import numpy as np
 import csv
 import torch.utils.data
 
+
 class CelebADataset(torch.utils.data.Dataset):
 
     def __init__(self, num, path, picSize, attr):
@@ -19,7 +20,7 @@ class CelebADataset(torch.utils.data.Dataset):
         self.name = []
         self.attr = []
         self.orit = []
-        
+
         with open(path + '/celeba-with-orientation.csv') as f:
             info = csv.DictReader(f)
             for row in info:
@@ -34,7 +35,7 @@ class CelebADataset(torch.utils.data.Dataset):
                 self.orit.append(row['orientation'])
                 if len(self.name) == self.num:
                     break
-        
+
     def __len__(self):
         return self.num
 
@@ -45,7 +46,8 @@ class CelebADataset(torch.utils.data.Dataset):
         for _ in range(4):
             B.append(np.random.randint(0, 5))
         W, H = img.size
-        img = img.crop((B[0], B[1], W - B[2], H - B[3]))
+        # img = img.crop((B[0], B[1], W - B[2], H - B[3]))
+
         W, H = img.size
         bnd = (H - W) // 2
         img = img.crop((0, bnd, W, W))
@@ -62,7 +64,7 @@ class CelebADataset(torch.utils.data.Dataset):
         :param item:index of the pic
         :return: (picture(numpy 3 * sz * sz), feat(numpy num))
         """
-#         print(tuple(self.attr[item]))
+        #         print(tuple(self.attr[item]))
         return self.getImage(item), tuple(self.attr[item])
 
 
@@ -76,8 +78,8 @@ def getTestImages(path, size=128, cut=False):
         if cut:
             W, H = img.size
             bbb = W // 4
-            img = img.crop((bbb * 2 // 3, bbb // 4, W - bbb, W - bbb))
+            img = img.crop((bbb // 2, bbb // 4, W - bbb, W - bbb))
 
         img = img.resize((size, size), Image.ANTIALIAS)
         ret += [(np.array(img) / 255.0).transpose(2, 0, 1)]
-    return ret
+    return rett
