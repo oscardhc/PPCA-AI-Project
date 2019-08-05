@@ -1,0 +1,254 @@
+\documentclass[UTF8,a4paper，12pt]{article}
+\usepackage[UTF8]{ctex}
+
+%% compile with xelatex
+%\usepackage{mathpazo}           % set math font
+%\usepackage{fontspec}  % to load non-Latex fonts (keeping math font)
+%\setmainfont{Palatino}
+%\setsansfont{Optima}
+%\usepackage{sectsty}
+%\allsectionsfont{\fontspec{Optima}}  % set header font
+%
+%\newfontfamily\menlo{Menlo}
+
+\usepackage{listings-ext}
+\lstset{language=Python,basicstyle=\footnotesize\menlo,}
+\usepackage{xunicode, xltxtra, listings, geometry, indentfirst, xeCJK, amsmath, clrscode, enumerate, indentfirst, wrapfig, color, caption, amssymb, multicol, ulem, esvect, bm, amsthm, extarrows, setspace}
+\usepackage[colorlinks,linkcolor=blue]{hyperref}
+
+\linespread{1.5}\selectfont
+
+
+%\usepackage{eulervm}
+
+\setlength{\parindent}{2em}
+
+\newcounter{RomanNumber}
+\newcommand{\mrm}[1]{(\setcounter{RomanNumber}{#1}\Roman{RomanNumber})}
+
+%\geometry{top=3cm,bottom=3cm}
+
+\def \e {\mathrm{e}}
+\def \dd {\mathrm{d}}
+\newcommand{\vc}[1]{\overrightarrow{#1}}
+\newcommand{\sq}[1]{\sqrt{#1}}
+\newcommand{\fr}[2]{\dfrac{#1}{#2}}
+\def\st {\mathrm{s.t.}}
+\def\eps {\varepsilon}
+\def\ds {\displaystyle}
+\def\CC {\mathbb{C}}
+\def\FF {\mathbb{F}}
+\def\GG {\mathbb{G}}
+\def\QQ {\mathbb{Q}}
+\def\RR {\mathbb{R}}
+\def\NN {\mathbb{N}}
+\def\ZZ {\mathbb{Z}}
+\def\ii {\mathrm{i}}
+\def\rtrans {\overset{r}{\rightarrow}}
+\def\ctrans {\underset{c}{\rightarrow}}
+\def\R {\mathrm{rank}}
+\def\cd {\cdot}
+\def\TR {\mathrm{trace}}
+\def\DET {\mathrm{det}}
+\def\LRA{\Leftrightarrow}
+\def\dsum {\ds\sum}
+\newcommand{\eq}[1]{\xlongequal{\mathrm{#1}}}
+\def\smtn{\ds\sum_{i=1}^n}
+\def\End{\mathrm{End}}
+\def\Hom{\mathrm{Hom}}
+\def\im{\mathrm{Im}}
+\def\ker{\mathrm{Ker}}
+\newcommand{\sm}[3]{\ds\sum_{#1=#2}^{#3}}
+\newcommand{\mttt}[4]{
+\left[ \begin{matrix}
+		#1 & #2 \\
+		#3 & #4
+	\end{matrix} \right]
+}
+\newcommand{\solpic}[2]{\begin{center}
+\includegraphics[ height=#1\baselineskip ]{#2.pdf}
+\end{center}}
+\def\MC {\mathcal}
+
+\theoremstyle{theorem}
+\newtheorem{thm}{Theorem}
+\theoremstyle{definition}
+\newtheorem{definition}{定义}
+\newtheorem{jielun}{结论}
+
+\newcommand{\qu}[1]{\quu{#1}\vspace{0cm}}
+
+\title{Image-to-image translation Documentation}
+\author{}
+
+\begin{document}
+	\maketitle
+	\tableofcontents
+	\newpage
+	
+	\section{我们要做什么？}
+		\subsection{I2I(image to image)}
+		
+广义上，I2I(image to image)泛指所有满足以下要求的任务：输入为一个图像，输出为符合要求的另一个图像。在两个图像中，有部分信息保持不变，正如无论是用“苹果”还是“apple”来表示，所指代的对象都是相同的事物。当前的I2I任务，主要包括风格迁移、图像降噪、超分辨率、语义分割等。本次实验中我们关注的是图像风格迁移及其中间过程。一个典型的图像风格迁移的案例，是将图片中的马识别出来并转换为斑马，或反向进行相同的转换。
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.6\textwidth]{assets/01}
+	\caption{\href{https://arxiv.org/abs/1703.10593}{风格迁移, 2017}}
+\end{figure}
+
+		\subsection{一些基础的知识}
+\subsubsection{插值算法}
+
+既然是从一个状态到另一个状态，一个显然的思路是量化两个状态，再通过数值的中间值反向得到中间状态。获得数值中间值的方法就是插值。简单讲，插值就是根据已知数据点（条件），来预测未知数据点值的方法。最简单的插值就是线性插值，即根据状态$x_1, x_2$和一个表示中间值相对位置的值$\eps ( \eps \in [0, 1])$得到中间值$\eps x_1+(1-\eps)x_2$。除此之外，常用的插值还有双线性插值、Slerp(spherical linear interpolation)等方法。
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.6\textwidth]{assets/02}
+	\caption{\href{https://devblogs.nvidia.com/photo-editing-generative-adversarial-networks-1}{常用插值方法，在两个黑色点之间作插值}}
+\end{figure}
+
+\subsubsection{同态}
+
+与插值算法相对应的一个概念是隐空间(latent space)。正如前文所述，在状态过渡时，我们需要先量化两个状态，再进行插值。任意一个状态$\Sigma$都能被量化为一个对应向量$t$，这些向量$t$的全体就分布在对应的隐空间中。状态间的过渡也可以用以下步骤进行描述：
+\begin{enumerate}
+	\item 从起始状态映射至隐空间；
+	\item 在隐空间中进行过渡（插值）；
+	\item 从隐空间映射至最终状态。
+\end{enumerate}
+
+显然，状态与隐空间中有意义的点之间是一一对应的关系，在拓扑上，这种关系也被称为同态。
+
+\subsubsection{卷积}
+
+如果直接使用插值，常常出现我们不想看到的一种情况：如果将一个人的脸转换为另一个人，在图像里两张人脸有略微的不对齐时，中间过程里会出现若隐若现的四个眼睛！这是由于我们的插值算法无法辨别出两张图片里五官的位置。显然，我们希望我们的程序能“聪明”地识别出图像中内容的特征信息。
+
+这些特征信息有什么特点呢？首先，像五官这样的信息在图片里往往是连续的像素点，此外，眼睛、头发等特征的颜色往往与皮肤的颜色有很大区别。因此，我们可以将图片中相邻一片像素点的颜色值（RGB值）作为一个可能的特征。卷积正是进行了这样的操作。在卷积过程中，我们取一个较小的矩阵，例如3×3，然后赋予这个矩阵每个点一个值。随后，我们将这个矩阵叠在图片上，将每一对重叠的数字相乘以后求和，就得到了卷积的值。而上述的矩阵，被我们称为卷积核。
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.6\textwidth]{assets/03}
+	\caption{\href{http://ex2tron.top}{卷积}}
+\end{figure}
+
+
+卷积可以提取出抽象的特征，通常，我们认为一次或连续多次优秀的卷积，能够将输入的内容映射至前文所述的，包含所有可以表示特征的向量的隐空间里。
+
+\subsubsection{神经网络}
+
+在计算机领域，神经网络往往是由具有适应性的简单单元组成的广泛并行互连的网络，它的组织能够模拟生物神经系统对真实世界物体所作出的交互反应。
+
+神经网络中最基本的成分是神经元模型，即上述的“简单单元”。在神经网络中，每个神经元与其它神经元相连，当它“兴奋”时，就会向相连的神经元发送信号；当某个神经元接受到的信号超过一个“阈值”时，它就会被激活，即“兴奋”起来。这一模型也被称为“M-P神经元模型”。
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.8\textwidth]{assets/04}
+	\caption{M-P神经元模型，周志华《机器学习》}
+\end{figure}
+
+
+理想的激活函数应当形如阶跃函数，即在输入大于某个值，神经元完全兴奋，否则完全不兴奋。然而，由于阶跃函数有不连续、不光滑等性质，因此实际常使用一些连续的，形状与阶跃函数相似的函数作为激活函数，如Sigmoid函数。由于它将较大范围内变化的输入值挤压到$[0,1]$输出值范围内，因此有时也称其为“挤压函数”。常用的激活函数还包括ReLU函数及其衍生等。
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.8\textwidth]{assets/05}
+	\caption{激活函数，左为阶跃函数，右为Sigmoid函数}
+\end{figure}
+
+将许多个这样的神经元按照一定的层次结构连接起来，就得到了神经网络。若神经元分属不同层次，每一层都只接收前一层的信号，并将信号传递至后一层，则称其为前馈神经网络。前馈神经网络中，在输入层与输出层之间的神经元层次，被称为隐层或隐含层。
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.5\textwidth]{assets/06}
+	\caption{\href{https://nndl.github.io/nndl-book.pdf}{多层前馈神经网络}}
+\end{figure}
+
+根据Hornik和Cybenko提出的万能近似定理，一个前馈神经网络中，如果具有线性输出层和至少一层具有“挤压”性质的隐层，则只要这个神经网络有足够多的隐藏单元，就能以任意精度来近似任意一个从有限维空间到有限维空间的Borel可测函数。因此，从理论上，神经网络可以很好地拟合得到几乎所有目标函数。
+
+\subsubsection{GAN}
+
+GAN（生成式对抗网络）当中，两个神经网络相互竞争，生成网络从隐空间中随机取样作为输入，其输出结果需要尽量模仿训练集中的真实样本。判别网络的输入则为真实样本或生成网络的输出，其目的是将生成网络的输出从真实样本中尽可能分辨出来。而生成网络则要尽可能地欺骗判别网络。两个网络相互对抗、不断调整参数，最终目的是使判别网络无法判断生成网络的输出结果是否真实。进一步细分，生成网络还可以分为三部分：提取特征（Encode），中间过程和翻译特征（Decode）。
+
+\section{最初的尝试：直接使用插值}
+
+当图片完全对齐时，使用线性插值的结果如下（最左、最右侧的图片分别是起始、目标图片，下同）：
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.8\textwidth]{assets/07}
+	\includegraphics[width=0.8\textwidth]{assets/08}
+	\caption{线性插值}
+\end{figure}
+
+看起来还不错，可这是由于我们的初始、目标图片的五官位置几乎完全一致。一旦图片里人的五官有不对齐，就会变成这样：
+
+中间过程里，生成的人脸甚至出现了四只模糊的眼睛！显然，这个方法是不够普适的，我们无法保证所有目标图像的重要信息都被存储在同一块区域里，它们可能出现在相似却不完全重合的位置。因此，我们此前介绍的卷积就该发挥作用了。
+
+\section{使用神经网络：cycle-GAN}
+
+\subsection{为什么使用cycle-GAN？}
+
+正如上文所述，传统的插值算法无法得到图片中具体内容的特征。为此，我们可以引入卷积网络。为了得到较为优秀的卷积核的值，可以使用神经网络进行训练。
+
+既然我们的中间图片是否优秀依赖于图片具体内容的特征，假设我们已经知道了我们的起始图片和目标图片的属性（为了避免混淆，我们将卷积提取到的内容称为特征，将具有具体意义的，例如眼睛、头发颜色等，称为属性），如果属性足够丰富，那么我们只要将我们起始属性与目标属性不同的那部分改变为目标属性，就实现了图片的转换与部分中间过程。例如，将一个在笑的男人变为一个没有笑的女人，我们可以先生成一个在笑的女人，再将这张生成的照片进一步转换为没有笑的女人即可。
+
+现在，我们的目标变为将具有某一属性（如“在笑”）的照片，转换为不具有该属性的照片，同时保证其余内容尽可能不改变。而这正是cycle-GAN所擅长的。
+
+\subsection{CycleGAN是什么？}
+
+CycleGAN用于解决在两个域之间相互转换的问题，正如其名字所示，它的结构是一对对偶的GAN。
+
+假设我们想要将域A与域B上的内容相互转换（例如在上文中，域A是“在笑的人”，而域B是“不在笑的人”），那么将会有一个生成网络负责将域A上的内容变为域B上的内容，一个判别网络负责鉴定当前内容是否在域B上，抑或是生成网络制造的错误图片。对称地，还有一个从B至A的生成网络和判别是否是A上天然图片的判别网络。
+
+为了让这两个GAN可以相互帮助对方进行修正，CycleGAN引入了重构误差，也就是将域A上的内容通过生成网络映射至域B后，再通过另一个生成网络重新映射回A，然后再利用对应的判别网络进行鉴别，并修改两个生成网络的参数以尽量迷惑鉴别网络。对于B上的内容，有一套对称的步骤。
+
+\subsection{一些额外的小技巧}
+
+CycleGAN中，还使用了U-net的模型。
+
+\subsection{结果如何？}
+
+\subsection{CycleGAN的问题}
+
+首先，这样的转换依赖于图片中的内容的属性，因此需要手动对图片的属性进行标注。当然，我们也可以手动训练一个网络来对图片中的属性进行标注。
+
+此外，正如结果所示，在图片属性不够丰富时，我们转换的最终结果与我们期望的结果并不相似。然而，当图片属性过多，训练这些网络的开销又会变得非常庞大，且图片的转换过程变得非常漫长。
+
+最后一个问题是，我们其实并不能获得所有有意义的中间状态。例如，当我们将一个在大笑的男人转换为不在笑的女人时，在“在大笑的女人 $\rightarrow$ 不在笑的女人”这一过程里，我们不能获得位于其间的“在微笑的女人”。
+
+\section{新的思路：引入一个同态}
+
+\subsection{为什么需要同态？}
+
+将生成网络细分为三个部分：提取特征、中间过程和翻译特征。只要我们能在提取特征后数据所在的隐空间里找到一个有效、连续的插值，上面的CycleGAN的问题就得到了解决。
+
+然而，实践中我们发现，如果在隐空间上作均匀的线性变化，对应图像上特定属性的变化并不均匀。相反，它往往在某一段区间上突变。如下图所示，我们希望将人脸的笑容隐去，并控制其间笑容逐渐淡化的程度（如第二行所示），但此前的方法并不能完成我们的目标（如第一行所示），图片在c与d之间有较大的变化，却在其余部分几乎不变。
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.8\textwidth]{assets/09}
+	\caption{}
+\end{figure}
+因此，在隐空间上进行插值时，线性函数效果不佳，需要一个非线性的函数。同时，CycleGAN中低效的问题仍然无法解决。
+
+因此，我们的新算法应当让卷积得到的特征尽可能表示图像中的所有属性，并且使用神经网络来拟合一个个插值。尽管隐空间上的插值无法使用线性插值，但现实属性的变换与过渡，是可以使用线性插值来完成的。如果我们能让现实属性的过渡与隐空间上的插值形成同态的关系，就可以通过现实属性的过渡来纠正隐空间上神经网络拟合插值函数的误差。
+
+\subsection{如何实现同态？}
+
+在神经网络中，生成器被分为三个部分：加密、插值、解密。其中加密与解密的过程，相当于实现图片与隐空间之间的相互映射。插值部分包括了多个并列的神经网络，每一个网络对应了一个有现实意义的属性。插值的最终结果等于每个神经网络结果的加和。由于插值结果与现实属性是同态的，可以直接对插值结果均匀变换，来调整某个属性的变化程度。
+为了校正用于插值的网络，需要额外引入一个网络$\MC A'(\cdot)$ ，其作用是拟合得到一个函数，可以将插值结果映射至现实属性，从而得到对应的误差（使用交叉熵的形式）：$$\min_ {\MC I_v} \MC L_{\MC I_{hom}} = \mathbb E [-\MC I'_v(z_i, z_j)\log(\MC A'(\MC I_v(F_i, F_j)))]$$
+
+其中， $\MC I_v(F_i, F_j)$是基于隐空间上特征的插值，对应到一组神经网络，$v$表示插值的强度，而$\MC I'_v(z_i, z_j)$是对属性的插值，可以直接使用线性插值的方法。
+
+网络$\MC A'(\cdot)$的目标是一个同态，其误差（被称为同态差距）依赖于将隐空间上未插值的向量通过该网络后，与图像本身预先标注的特征进行比较与修正。
+
+\subsection{最终成果}
+
+\subsection{问题与改进}
+
+在训练过程中，我们向测试集中加入了一些额外的图片，发现在训练相同时间时的效果远弱于数据集中自带的测试集。我们认为，这是由于数据集中的头像位置几乎重合，因此我们加入的图片即使稍有位置的差异，也会造成效果不佳的问题。于是，我们在训练过程中，手动为图像增加了位置的变化等干扰，得到了较好的结果。
+
+此外，人脸本身具有较好的连续性，但很多数据集并没有这一优势。因此，当我们将这一模型应用于一些图像变化连续性弱的领域时，得到的结果并不令人满意，这是这一网络没有考虑到的问题。
+
+\section{总结}
+
+\end{document}
