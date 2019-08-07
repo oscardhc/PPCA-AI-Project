@@ -14,6 +14,7 @@ class Program(object):
 
     def __init__(self, imgsize, device, attr, toLoad, onServer):
         super().__init__()
+
         self.epoch = 3
         self.batch_size = 48
 
@@ -250,7 +251,6 @@ class Program(object):
             print(self.P, file=f)
 
     def run(self, imageA, imageB, strength, flag=True):
-        """batch size!"""
         imageA = imageA.reshape((1, 3, self.imgsize, self.imgsize))
         imageB = imageB.reshape((1, 3, self.imgsize, self.imgsize))
         featA = self.E(imageA)
@@ -287,6 +287,30 @@ class Program(object):
                         tmp.append(res)
                 tmp.append(arr[i + 1].transpose(1, 2, 0))
                 tt.append(np.hstack(tmp))
+        return tt
+
+    def showGIF(self, prec):
+        """
+        :param prec: number of steps
+        :return:
+        """
+        tt = []
+        rg = len(arr) - 1
+        with torch.no_grad():
+            for i in range(rg):
+                ste = torch.zeros(1, self.attr_n + 1).to(self.device)
+                tmp = []
+                for j in range(self.attr_n + 1):
+                    for _k in range(1, 1 + prec):
+                        k = 1.0 * _k / prec
+                        ste[0][j] = k
+                        res = self.run(torch.tensor(arr[i]).float().to(self.device),
+                                       torch.tensor(arr[i + 1]).float().to(self.device),
+                                       ste)
+                        res.squeeze_()
+                        res = res.detach().cpu().numpy().transpose(1, 2, 0)
+                        tmp.append(res)
+
         return tt
 
     def showResult(self):
