@@ -1,7 +1,7 @@
 import Lib.os as os
 import Lib.json as json
 import torch
-import model as m 
+import model as m
 import numpy as np
 from PIL import Image
 
@@ -17,6 +17,7 @@ device = 0
 E = 0
 D = 0
 I = 0
+
 def init():
     with open(config_path, 'r') as f:
         config_json = json.load(f)
@@ -31,14 +32,14 @@ def init():
 
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     attr = [['Mouth_Slightly_Open', 'Smiling'],
-                ['Male', 'No_Beard', 'Mustache', 'Goatee', 'Sideburns'],
-                ['Black_Hair', 'Blond_Hair', 'Brown_Hair', 'Gray_Hair'],
-                ['Bald', 'Receding_Hairline', 'Bangs'],
-                ['Young'],
-                ['Arched_Eyebrows', 'Bags_Under_Eyes', 'Bushy_Eyebrows', 'Eyeglasses'],
-                ['Big_Lips', 'Big_Nose', 'Chubby', 'Double_Chin', 'High_Cheekbones', 'Narrow_Eyes', 'Pointy_Nose'],
-                ['Straight_Hair', 'Wavy_Hair'],
-                ['Attractive', 'Pale_Skin', 'Heavy_Makeup']]
+            ['Male', 'No_Beard', 'Mustache', 'Goatee', 'Sideburns'],
+            ['Black_Hair', 'Blond_Hair', 'Brown_Hair', 'Gray_Hair'],
+            ['Bald', 'Receding_Hairline', 'Bangs'],
+            ['Young'],
+            ['Arched_Eyebrows', 'Bags_Under_Eyes', 'Bushy_Eyebrows', 'Eyeglasses'],
+            ['Big_Lips', 'Big_Nose', 'Chubby', 'Double_Chin', 'High_Cheekbones', 'Narrow_Eyes', 'Pointy_Nose'],
+            ['Straight_Hair', 'Wavy_Hair'],
+            ['Attractive', 'Pale_Skin', 'Heavy_Makeup']]
     attr_n = len(attr)
 
     E = m.Encoder(path=enc_path).to(device)
@@ -76,7 +77,6 @@ def predict():
     with open(output_path, "w") as f:
         json.dump(output_json, f)
         f.flush()
-    
 
 
 if __name__ == "__main__":
