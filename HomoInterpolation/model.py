@@ -103,7 +103,7 @@ class Decoder(nn.Module):
         ]
 
         self.model = nn.Sequential(*model)
-        sdict = torch.load('../input/predec/dec.pth')
+        sdict = torch.load('../../predec/dec.pth')
         self.load_state_dict(sdict)
         self.sig = nn.Sequential(*[nn.Sigmoid()])
 
@@ -163,4 +163,4 @@ class VGG(nn.Module):
         self.load_state_dict(sdict)
 
     def forward(self, x):
-        return self.model(x))
+        return self.model(x)

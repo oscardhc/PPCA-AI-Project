@@ -1,6 +1,6 @@
 
 import torch
-import train
+from train import Program
 
 if __name__ == '__main__':
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
@@ -16,6 +16,6 @@ if __name__ == '__main__':
             ['Straight_Hair', 'Wavy_Hair'],
             ['Attractive', 'Pale_Skin', 'Heavy_Makeup']]
 
-    it = Program(imgsize=128, toLoad=True, device=device,
+    it = Program(imgsize=128, toLoad=False, device=device,
                  attr=attr, onServer=onServer)
     it.train()

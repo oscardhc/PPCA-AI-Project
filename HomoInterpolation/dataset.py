@@ -82,4 +82,4 @@ def getTestImages(path, size=128, cut=False):
 
         img = img.resize((size, size), Image.ANTIALIAS)
         ret += [(np.array(img) / 255.0).transpose(2, 0, 1)]
-    return rett
+    return ret

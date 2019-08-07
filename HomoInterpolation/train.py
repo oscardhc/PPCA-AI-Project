@@ -1,13 +1,13 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import model as m
 from dataset import *
 from torch.utils.data import DataLoader
 import numpy as np
 from PIL import Image
 from tqdm import tqdm
 import tensorboardX
+from model import *
 
 
 class Program(object):
@@ -15,7 +15,7 @@ class Program(object):
     def __init__(self, imgsize, device, attr, toLoad, onServer):
         super().__init__()
         self.epoch = 3
-        self.batch_size = 48
+        self.batch_size = 20
 
         self.sig = nn.Sigmoid()
 
@@ -31,34 +31,20 @@ class Program(object):
 
         self.total_step = 0
 
-        self.E = m.Encoder(
-            path='/home/oscar/dhc/HomoInterpGAN/checkpoints/vgg/vgg.pth' if onServer else '/Users/oscar/Downloads/vgg/vgg.pth').to(
-            device)
-        self.D = m.Decoder().to(device)
-        self.dis = m.Discriminator(self.attr).to(device)
-        self.I = m.Interp(self.attr_n + 1).to(device)
-        self.P = m.KG().to(device)
-        self.Teacher = m.VGG(
-            path='/home/oscar/dhc/HomoInterpGAN/checkpoints/vgg/vgg.pth' if onServer else '/Users/oscar/Downloads/vgg/vgg.pth').to(
-            device)
-
-        if toLoad:
-            self.load_model()
-
         self.dataset = CelebADataset(192000,
-                                     '../input/align-celeba/dat/celeba-dataset' if onServer else '/Users/oscar/Downloads/celeba-dataset',
+                                     '../../celeba-dataset' if onServer else '/Users/oscar/Downloads/celeba-dataset',
                                      self.imgsize, self.attrName)
         self.device = device
 
         self.fixedImgs = getTestImages(
-            '../input/align-celeba/dat/medium' if onServer else '/Users/oscar/Downloads/test-dataset', 128, cut=True)
+            '../../medium' if onServer else '/Users/oscar/Downloads/test-dataset', 128, cut=True)
         self.fixedfix = getTestImages(
-            '../input/align-celeba/dat/fixed' if onServer else '/Users/oscar/Downloads/test-dataset', 128)
+            '../../fixed' if onServer else '/Users/oscar/Downloads/test-dataset', 128)
 
         self.fixedlen = len(self.fixedImgs) + len(self.fixedfix)
 
         self.E = Encoder(
-            path='../input/pervgg/vgg/vgg/vgg.pth' if onServer else '/Users/oscar/Downloads/vgg/vgg.pth').to(
+            path='../../prevgg/vgg.pth' if onServer else '/Users/oscar/Downloads/vgg/vgg.pth').to(
             device)
         self.D = Decoder().to(device)
         self.dis = Discriminator(self.attr).to(device)
@@ -66,7 +52,7 @@ class Program(object):
         self.I = Interp(self.attr_n + 1).to(device)
         self.P = KG().to(device)
         self.Teacher = VGG(
-            path='../input/pervgg/vgg/vgg/vgg.pth' if onServer else '/Users/oscar/Downloads/vgg/vgg.pth').to(
+            path='../../prevgg/vgg.pth' if onServer else '/Users/oscar/Downloads/vgg/vgg.pth').to(
             device)
 
         if toLoad:
