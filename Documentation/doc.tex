@@ -211,6 +211,19 @@ CycleGAN中，还使用了U-net的模型。
 
 \subsection{结果如何？}
 
+我们取三组属性：Young, Blond Hair, Male进行训练，以128为batch size各进行了30000次迭代，得到了以下结果。
+
+下图中，人像由“非年轻黑发男性”渐变为了“年轻金发女性”。
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.2\textwidth]{assets/14-0}
+	\includegraphics[width=0.2\textwidth]{assets/14-1}
+	\includegraphics[width=0.2\textwidth]{assets/14-2}
+	\includegraphics[width=0.2\textwidth]{assets/14-3}
+	\caption{}
+\end{figure}
+
 \subsection{CycleGAN的问题}
 
 首先，这样的转换依赖于图片中的内容的属性，因此需要手动对图片的属性进行标注。当然，我们也可以手动训练一个网络来对图片中的属性进行标注。
@@ -332,11 +345,11 @@ $$\MC L_{\MC I} = \lambda_{\mathrm GAN_{\MC I}}\MC L_{\mathrm GAN_{\MC E,I}} + \
 
 训练过程中，我们采用Adam Optimizer，其中$lr = 0.0002, betas = \{0.5, 0.999\}$。
 
-使用了"CelebA"数据集，含有192000张带有标记的人像图片，以48为batch size，进行了共128000次迭代。
+使用了"CelebA"数据集，含有192000张带有标记的人像图片。以48为batch size，128x128为image size，进行了共128000次迭代。
 
 \subsection{最终成果}
 
-以下图片展示了模型的最终成果，从左上角图片到右下角图片实现了人像的过渡变换。
+下图展示了模型的最终成果，从左上角图片到右下角图片实现了人像的过渡变换。
 
 \begin{figure}[htbp]
 	\centering
@@ -351,6 +364,8 @@ $$\MC L_{\MC I} = \lambda_{\mathrm GAN_{\MC I}}\MC L_{\mathrm GAN_{\MC E,I}} + \
 	\includegraphics[width=0.8\textwidth]{assets/12-2}
 	\caption{}
 \end{figure}
+
+下图中，左侧图片为原图，右侧图片为经过模型但不改变任何参数的结果图片，可以看出Encoder-Decoder可以较为细致地还原出原图。
 
 \begin{figure}[htbp]
 	\centering
