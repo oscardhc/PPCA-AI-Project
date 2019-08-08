@@ -79,10 +79,12 @@
 \newcommand{\qu}[1]{\quu{#1}\vspace{0cm}}
 
 \title{Image-to-image translation Documentation}
-\author{}
+\author{518030910417 董海辰 \\ 518030910440 庄永昊}
+\date{2019年8月}
 
 \begin{document}
 	\maketitle
+	\newpage
 	\tableofcontents
 	\newpage
 	
@@ -244,9 +246,10 @@ CycleGAN中，还使用了U-net的模型。
 
 \begin{figure}[htbp]
 	\centering
-	\includegraphics[width=0.8\textwidth]{assets/10}
+	\includegraphics[width=1.0\textwidth]{assets/10}
 	\caption{}
 \end{figure}
+
 训练时，读入两组图片$\mathrm Im_a$、$\mathrm Im_b$和它们自身的一些属性$\mathrm z_a$、$\mathrm z_b$。图片首先通过提取特征的网络$\MC E$，得到对应的特征矩阵(将起始图片和目标图片的特征分别记为$\mathrm f_a$和$\mathrm f_b$)。
 
 接下来我们将两个特征矩阵通过插值器$\MC I$进行插值，得到$\mathrm F_{\MC interp}$。插值器是一组结构相同的神经网络，插值的方法如下：
@@ -309,7 +312,51 @@ $$\MC L_{\MC I} = \lambda_{\mathrm GAN_{\MC I}}\MC L_{\mathrm GAN_{\MC E,I}} + \
 
 过程中引入的网络$\MC A'(\cdot)$的更新方法如公式4.8所示。
 
+\subsection{实现细节}
+
+我们在论文的基础上，新增加了一些分组，以下9组条件更为全面描述了人脸的特征：
+
+\begin{tabular}{c|c}
+  编号 & 分组 \\
+  \hline
+  1 & Mouth Slightly Open, Smiling \\
+  2 & Male,No Beard,Mustache,Goatee,Sideburns \\
+ 3 & Black Hair,Blond Hair,Brown Hair,Gray Hair\\
+ 4 & Bald,Receding Hairline,Bangs\\
+ 5 & Young\\
+ 6 & Arched Eyebrows,Bags Under Eyes,Bushy Eyebrows,Eyeglasses\\
+ 7 & Big Lips,Big Nose,Chubby,Double Chin,High Cheekbones,Narrow Eyes,Pointy Nose\\
+ 8 & Straight Hair,Wavy Hair\\
+ 9 & Attractive,Pale Skin,Heavy Makeup
+\end{tabular}
+
+训练过程中，我们采用Adam Optimizer，其中$lr = 0.0002, betas = \{0.5, 0.999\}$。
+
+使用了"CelebA"数据集，含有192000张带有标记的人像图片，以48为batch size，进行了共128000次迭代。
+
 \subsection{最终成果}
+
+以下图片展示了模型的最终成果，从左上角图片到右下角图片实现了人像的过渡变换。
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.8\textwidth]{assets/11}
+	\includegraphics[width=0.8\textwidth]{assets/11-2}
+	\caption{}
+\end{figure}
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.8\textwidth]{assets/12}
+	\includegraphics[width=0.8\textwidth]{assets/12-2}
+	\caption{}
+\end{figure}
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.6\textwidth]{assets/13}
+	\caption{}
+\end{figure}
 
 \subsection{问题与改进}
 
