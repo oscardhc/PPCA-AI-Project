@@ -16,6 +16,7 @@ if __name__ == '__main__':
             ['Straight_Hair', 'Wavy_Hair'],
             ['Attractive', 'Pale_Skin', 'Heavy_Makeup']]
 
-    it = Program(imgsize=128, toLoad=False, device=device,
+    it = Program(imgsize=128, toLoad=True, device=device,
                  attr=attr, onServer=onServer)
-    it.train()
+#     it.train()
+    it.showResult()
