@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.14159265-2.6-0.999991 (MiKTeX 2.9.7140 64-bit) (preloaded format=xelatex 2019.8.7)  8 AUG 2019 11:01
+This is XeTeX, Version 3.14159265-2.6-0.999991 (MiKTeX 2.9.7140 64-bit) (preloaded format=xelatex 2019.8.7)  8 AUG 2019 11:33
 entering extended mode
 **c:/Users/Howell.Y.H.Zhuang/Desktop/Python/PPCA/Project/Documentation/doc.tex
 (c:/Users/Howell.Y.H.Zhuang/Desktop/Python/PPCA/Project/Documentation/doc.tex
@@ -1259,19 +1259,21 @@ File: assets/08.jpeg Graphic file (type bmp)
  [7] [8]
 File: assets/09.png Graphic file (type bmp)
 <assets/09.png>
- [9] [10]
 File: assets/10.png Graphic file (type bmp)
 <assets/10.png>
+ [9] [10]
+File: assets/11.png Graphic file (type bmp)
+<assets/11.png>
  [11]
 
-c:/Users/Howell.Y.H.Zhuang/Desktop/Python/PPCA/Project/Documentation/doc.tex:28
-4: LaTeX Error: File `assets/11' not found.
+c:/Users/Howell.Y.H.Zhuang/Desktop/Python/PPCA/Project/Documentation/doc.tex:29
+4: LaTeX Error: File `assets/12' not found.
 
 See the LaTeX manual or LaTeX Companion for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.284 ...egraphics[width=0.8\textwidth]{assets/11}
+l.294 ...egraphics[width=0.8\textwidth]{assets/12}
                                                   
 I could not locate the file with any of these extensions:
 .pdf,.PDF,.ai,.AI,.png,.PNG,.jpg,.JPG,.jpeg,.JPEG,.jp2,.JP2,.jpf,.JPF,.bmp,.BMP
@@ -1280,12 +1282,12 @@ Try typing  <return>  to proceed.
 If that doesn't work, type  X <return>  to quit.
 
 [12] [13] [14]
-Package atveryend Info: Empty hook `BeforeClearDocument' on input line 359.
+Package atveryend Info: Empty hook `BeforeClearDocument' on input line 375.
  [15]
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 359.
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 375.
  (doc.aux)
-Package atveryend Info: Empty hook `AtVeryEndDocument' on input line 359.
-Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 359.
+Package atveryend Info: Empty hook `AtVeryEndDocument' on input line 375.
+Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 375.
 
 
 Package rerunfilecheck Warning: File `doc.out' has changed.
@@ -1294,18 +1296,18 @@ Package rerunfilecheck Warning: File `doc.out' has changed.
 
 Package rerunfilecheck Info: Checksums for `doc.out':
 (rerunfilecheck)             Before: 
-(rerunfilecheck)             After:  DB10E9D83DFA3014FAB1EC116A28F651.
+(rerunfilecheck)             After:  E61F84E32417F112FB684969DE704186.
 
 LaTeX Font Warning: Size substitutions with differences
 (Font)              up to 0.41063pt have occurred.
 
-Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 359.
+Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 375.
  ) 
 Here is how much of TeX's memory you used:
- 32917 strings out of 427669
- 632146 string characters out of 3142517
- 694489 words of memory out of 3000000
- 36606 multiletter control sequences out of 15000+200000
+ 32921 strings out of 427669
+ 632204 string characters out of 3142517
+ 696489 words of memory out of 3000000
+ 36609 multiletter control sequences out of 15000+200000
  547341 words of font info for 122 fonts, out of 3000000 for 9000
  1348 hyphenation exceptions out of 8191
  54i,6n,92p,427b,454s stack positions out of 5000i,500n,10000p,200000b,50000s
