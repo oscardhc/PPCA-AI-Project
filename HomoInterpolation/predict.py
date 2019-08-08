@@ -1,7 +1,7 @@
 import Lib.os as os
 import Lib.json as json
 import torch
-import model as m
+import run
 import numpy as np
 from PIL import Image
 

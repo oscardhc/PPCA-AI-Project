@@ -78,8 +78,8 @@ def getTestImages(path, size=128, cut=False):
         if cut:
             W, H = img.size
             bbb = W // 4
-            img = img.crop((bbb // 2, bbb // 4, W - bbb, W - bbb))
+            img = img.crop((bbb * 2 // 3, bbb // 4, W - bbb, W - bbb))
 
         img = img.resize((size, size), Image.ANTIALIAS)
         ret += [(np.array(img) / 255.0).transpose(2, 0, 1)]
-    return rett
+    return ret
