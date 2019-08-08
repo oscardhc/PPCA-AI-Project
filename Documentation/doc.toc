@@ -1,0 +1,22 @@
+\contentsline {section}{\numberline {1}我们要做什么？}{2}{section.1}% 
+\contentsline {subsection}{\numberline {1.1}I2I(image to image)}{2}{subsection.1.1}% 
+\contentsline {subsection}{\numberline {1.2}一些基础的知识}{2}{subsection.1.2}% 
+\contentsline {subsubsection}{\numberline {1.2.1}插值算法}{2}{subsubsection.1.2.1}% 
+\contentsline {subsubsection}{\numberline {1.2.2}同态}{3}{subsubsection.1.2.2}% 
+\contentsline {subsubsection}{\numberline {1.2.3}卷积}{4}{subsubsection.1.2.3}% 
+\contentsline {subsubsection}{\numberline {1.2.4}神经网络}{4}{subsubsection.1.2.4}% 
+\contentsline {subsubsection}{\numberline {1.2.5}误差逆传播与梯度下降}{6}{subsubsection.1.2.5}% 
+\contentsline {subsubsection}{\numberline {1.2.6}GAN}{7}{subsubsection.1.2.6}% 
+\contentsline {section}{\numberline {2}最初的尝试：直接使用插值}{8}{section.2}% 
+\contentsline {section}{\numberline {3}使用神经网络：CycleGAN}{8}{section.3}% 
+\contentsline {subsection}{\numberline {3.1}为什么使用CycleGAN？}{8}{subsection.3.1}% 
+\contentsline {subsection}{\numberline {3.2}CycleGAN是什么？}{9}{subsection.3.2}% 
+\contentsline {subsection}{\numberline {3.3}一些额外的小技巧}{9}{subsection.3.3}% 
+\contentsline {subsection}{\numberline {3.4}结果如何？}{10}{subsection.3.4}% 
+\contentsline {subsection}{\numberline {3.5}CycleGAN的问题}{10}{subsection.3.5}% 
+\contentsline {section}{\numberline {4}新的思路：引入一个同态}{11}{section.4}% 
+\contentsline {subsection}{\numberline {4.1}为什么需要同态？}{11}{subsection.4.1}% 
+\contentsline {subsection}{\numberline {4.2}如何实现同态？}{12}{subsection.4.2}% 
+\contentsline {subsection}{\numberline {4.3}最终成果}{14}{subsection.4.3}% 
+\contentsline {subsection}{\numberline {4.4}问题与改进}{14}{subsection.4.4}% 
+\contentsline {section}{\numberline {5}总结}{15}{section.5}% 

@@ -155,7 +155,7 @@
 	\caption{激活函数，左为阶跃函数，右为Sigmoid函数}
 \end{figure}
 
-将许多个这样的神经元按照一定的层次结构连接起来，就得到了神经网络。若神经元分属不同层次，每一层都只接收前一层的信号，并将信号传递至后一层，则称其为前馈神经网络。前馈神经网络中，在输入层与输出层之间的神经元层次，被称为隐层或隐含层。
+将许多个这样的神经元按照一定的层次结构连接起来，就得到了神经网络。若神经元分属不同层次，每一层都只接收前一层的信号，并将信号传递至后一层，则称其为前馈神经网络。前馈神经网络有许多优秀的模型，通常我们说“神经网络”时，指代的就是前馈神经网络。前馈神经网络中，在输入层与输出层之间的神经元层次，被称为隐层或隐含层。
 
 \begin{figure}[htbp]
 	\centering
@@ -164,6 +164,37 @@
 \end{figure}
 
 根据Hornik和Cybenko提出的万能近似定理，一个前馈神经网络中，如果具有线性输出层和至少一层具有“挤压”性质的隐层，则只要这个神经网络有足够多的隐藏单元，就能以任意精度来近似任意一个从有限维空间到有限维空间的Borel可测函数。因此，从理论上，神经网络可以很好地拟合得到几乎所有目标函数。
+
+\subsubsection{误差逆传播与梯度下降}
+
+如何对神经网络中繁多的参数进行更新呢？目前常用的方法被称为误差逆传播算法，常用于多层前馈神经网络。一个简单的神经网络如上图所示，包含输入层、隐藏层和输出层。假设输入层共有d个结点，用$\MC x_1,x_2...x_d$，隐层上共有q个结点，编号为$\MC b_1,b_2...b_q$，其阈值为$\gamma_1,\gamma_2...\gamma_q$。输出层共有l个结点，依次为$\MC y_1,y_2...y_l$，其阈值为$\theta_1,\theta_2...\theta_l$。不失一般性，假设每一层都是全连接层，激活函数为Sigmoid函数。
+
+为了方便书写，假设输入层至隐层的连接权为$\MC v_{\MC ij}, i=1,2...d j=1,2...q$，隐层至输出层的连接权为$\MC w_{\MC ij}, i=1,2...q j=1,2...l$，且假设隐层的输入为$\alpha_i i=1,2,...q$，输出层的输入为$\beta_i i=1,2,...l$。
+
+对于一个训练例$(\MC x_{k},\MC y_{k})$，神经网络的输出为$\hat{\MC y_{k}}=(\hat{\MC y_1^k},\hat{\MC y_2^k}...\hat{\MC y_l^k})}$。则网络的均方误差为
+
+$$\mathrm E_{k}=\frac{1}{2}\sum_{j=1}^{l}{\hat{(\MC y_j^k}-\MC y_j^k)^2}$$
+
+任意参数$\MC v$的更新估计式为：
+$\MC v \leftarrow \MC v + \Delta\MC v$
+
+下面以隐层到输出层的连接权$\MC w_{\MC hj}$为例描述这一算法：
+
+BP算法基于梯度下降策略，以目标的负梯度方向对参数进行调整。对于一个给定的学习率$\eta$（用于衡量每次梯度下降的程度，在0至1之间），有
+
+$$\Delta\MC w_{\MC hj}=-\eta\frac{\partial\mathrm E_{k}}{\partial\MC w_{\MC hj}}$$
+
+注意到$\MC w_{\MC hj}$先影响道第$\MC j$个输出层神经元的输入值$\beta_{j}$，再影响到其输出值$\hat{\MC y_{j}^{k}}$，然后影响到$\mathrm E_{k}$，有
+
+$\frac{\partial\mathrm E_{k}}{\partial\MC w_{\MC hj}}=\frac{\partial\mathrm E_k}{\partial\hat{\MC y_{j}^{k}}}\cdot\frac{\partial\hat{\MC y_{j}^{k}}}{\partial\beta_{j}}\cdot\frac{\partial\beta_{j}}{\partial\MC w_{\MC hj}}$
+
+由定义有$\frac{\partial\beta_{j}}{\partial\MC w_{\MC hj}}=\MC b_{h}$
+
+Sigmoid函数在任意位置的导数均存在且可以被解出（其余连续的激活函数均满足这一要求）。有
+
+$$\MC g_{j}=-\frac{\partial\mathrm E_{k}}{\partial\hat{\MC y_{j}^{k}}}\cdot\frac{\partial\hat{\MC y_{j}^{k}}}{\partial\beta_{j}}=-(\hat{\MC y_{j}^{k}}-\MC y_{j}^{k})\cdot\MC f'(\beta_{j}-\theta_{j})$$
+
+则$\MC w_{\MC hj}$的更新公式为$$\Delta\MC w_{\MC hj} = \eta\MC g_j\MC b_h$$
 
 \subsubsection{GAN}
 
@@ -203,9 +234,15 @@ CycleGAN用于解决在两个域之间相互转换的问题，正如其名字所
 
 \subsection{一些额外的小技巧}
 
-CycleGAN中，还使用了U-net的模型。
+神经网络的结构采用了ResNet模型。ResNet模型最初被用于解决神经网络层数加深至一定数量，性能降低、计算速度不足的问题。在ResNet模型中，较深层的输入由两部分构成，其一为上一层的输出信息（被称为残差），其二为多层以前的输出信息（称为恒等项），如下图所示：
 
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.8\textwidth]{assets/09}
+	\caption{ResNet模型。$\MC F(\mathrm x)$是残差项，而$\mathrm x$是恒等项}
+\end{figure}
 
+实际上，这相当于将学习的目标从被提取的特征本身，变为了被提取特征与输入值的差，正因此，输出信息才会被称为“残差”。在进行反向梯度传播时，这一网络只有在极少情况下才会造成残差项与恒等项的梯度相同（恒等项梯度仅由激活函数决定，与一个常数项类似），反向传播梯度消失的情况。因此理论上，如果网络已经到达最优，继续加深网络，残差项的影响将会变为0，仅剩恒等项。即深度过高时，网络的结构相当于保持不变，仍然处于最优状态。
 
 \subsection{结果如何？}
 
@@ -227,7 +264,7 @@ CycleGAN中，还使用了U-net的模型。
 
 \begin{figure}[htbp]
 	\centering
-	\includegraphics[width=0.8\textwidth]{assets/09}
+	\includegraphics[width=0.8\textwidth]{assets/10}
 	\caption{}
 \end{figure}
 因此，在隐空间上进行插值时，线性函数效果不佳，需要一个非线性的函数。同时，CycleGAN中低效的问题仍然无法解决。
@@ -244,14 +281,14 @@ CycleGAN中，还使用了U-net的模型。
 
 \begin{figure}[htbp]
 	\centering
-	\includegraphics[width=0.8\textwidth]{assets/10}
+	\includegraphics[width=0.8\textwidth]{assets/11}
 	\caption{}
 \end{figure}
 训练时，读入两组图片$\mathrm Im_a$、$\mathrm Im_b$和它们自身的一些属性$\mathrm z_a$、$\mathrm z_b$。图片首先通过提取特征的网络$\MC E$，得到对应的特征矩阵(将起始图片和目标图片的特征分别记为$\mathrm f_a$和$\mathrm f_b$)。
 
 接下来我们将两个特征矩阵通过插值器$\MC I$进行插值，得到$\mathrm F_{\MC interp}$。插值器是一组结构相同的神经网络，插值的方法如下：
 
-$$\mathrm F_{\MC interp} = \mathrm F_a + \sum_{i=1}^{c}{\MC v_i * \MC T_i(\mathrm F_b - \mathrm F_a)}$$
+$$\mathrm F_{\MC interp} = \mathrm F_a + \sum_{i=1}^{c}{\MC v_i \cdot \MC T_i(\mathrm F_b - \mathrm F_a)}$$
 
 其中，$\MC T_i$代表第$\mathrm i$个属性的插值函数，是一个简单的神经网络，$\MC v_i$代表了第$\mathrm i$个属性的变化程度，在0和1之间，越靠近0，表示这一属性的变化程度越小。这一插值的原理还会在下文中插值部分进一步解释。
 
@@ -287,7 +324,7 @@ $$\MC L_{\MC E} = \lambda_{\mathrm GAN_{\MC E}}\MC L_{\mathrm GAN_{\MC E,I}} + \
 
 现在我们来看插值的部分。正如上文所述，我们引入了一个网络$\MC A'(\cdot)$，模拟从插值得到的矩阵$\MC T(\mathrm F_b - \mathrm F_a)$到属性$\mathrm z$（与图片一同读入，随插值改变）的同态。注意$\MC T$实际上是一组网络$\MC T_1...T_c$。对两张图片的属性，可以直接使用线性插值，即
 
-$$\mathrm z_{\MC interp} = \mathrm z_a + \sum_{i=1}^{c}{\MC v_i * (\mathrm z_b - \mathrm z_a)}$$
+$$\mathrm z_{\MC interp} = \mathrm z_a + \sum_{i=1}^{c}{\MC v_i \cdot (\mathrm z_b - \mathrm z_a)}$$
 
 上文中，两个特征的差通过插值器后得到的矩阵可以直接与代表插值程度的系数相乘，正是由于插值器得到矩阵与属性的同态，和属性可以进行上述线性插值。通过这一同态，我们可以更新插值网络的参数了：
 
