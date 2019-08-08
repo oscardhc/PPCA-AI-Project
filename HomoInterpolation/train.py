@@ -2,6 +2,7 @@
 import os
 import json
 import run
+import torch
 
 """
 bash下设置环境变量的方法（用于本地测试 最好使用绝对路径）
@@ -25,11 +26,43 @@ with open(config_path, 'r') as f:
     config = json.load(f)
 print(config)
 
-# 数据集路径
-dataset_path = os.path.join(READONLY_PATH, config['dataset_path'])
-
 # 模型训练（略）
+imagesize = int(config['image_size'])
+device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+attr = [['Mouth_Slightly_Open', 'Smiling'],
+        ['Male', 'No_Beard', 'Mustache', 'Goatee', 'Sideburns'],
+        ['Black_Hair', 'Blond_Hair', 'Brown_Hair', 'Gray_Hair'],
+        ['Bald', 'Receding_Hairline', 'Bangs'],
+        ['Young'],
+        ['Arched_Eyebrows', 'Bags_Under_Eyes', 'Bushy_Eyebrows', 'Eyeglasses'],
+        ['Big_Lips', 'Big_Nose', 'Chubby', 'Double_Chin', 'High_Cheekbones', 'Narrow_Eyes', 'Pointy_Nose'],
+        ['Straight_Hair', 'Wavy_Hair'],
+        ['Attractive', 'Pale_Skin', 'Heavy_Makeup']]
 
+dataPath = READONLY_PATH + config['data_path']
+testPath = READONLY_PATH + config['test_path']
+vggPath = READONLY_PATH + config['vgg_path']
+
+try:
+    f = open(os.path.join(LONGTERM_PATH, 'mata.txt'), 'r')
+    ar = f.read().split(' ')
+    f.close()
+    epo = int(ar[0])
+    ste = int(ar[1])
+    toLoad = True
+except:
+    f = open(os.path.join(LONGTERM_PATH, 'mata.txt'), 'w')
+    epo = 0
+    ste = 0
+    print(epo, ste, file=f)
+    toLoad = False
+    f.close()
+
+batchsize = config['batch_size']
+batchpen = config['batch_penalty']
+
+prog = run.Program(imagesize, device, attr, toLoad, batchsize, epo, ste, batchpen, dataPath, testPath, LONGTERM_PATH,
+                   vggPath)
 
 # 保存模型和结果
 model_name = "model.h5"

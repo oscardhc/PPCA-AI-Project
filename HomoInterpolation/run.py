@@ -12,54 +12,49 @@ from model import *
 
 class Program(object):
 
-    def __init__(self, imgsize, device, attr, toLoad, onServer):
+    def __init__(self, imgsize, device, attr, toLoad, batchsize, epo, batchpen, path, tpath, mpath, vpath):
         super().__init__()
 
-        self.epoch = 3
-        self.batch_size = 20
-
-        self.sig = nn.Sigmoid()
+        self.epoch = epo
+        self.step = ste
+        self.batch_size = batchsize
 
         self.attrName = attr
         self.attr = []
+
         for group in self.attrName:
             self.attr.append(len(group))
+
         self.attr_n = len(attr)
         self.attrname = attr
 
-        self.batch_penalty = 5
+        self.batch_penalty = batchpen
         self.imgsize = imgsize
 
         self.total_step = 0
 
-        self.dataset = CelebADataset(192000,
-                                     '../../celeba-dataset' if onServer else '/Users/oscar/Downloads/celeba-dataset',
-                                     self.imgsize, self.attrName)
+        self.datapath = path
         self.device = device
 
-        self.fixedImgs = getTestImages(
-            '../../medium' if onServer else '/Users/oscar/Downloads/test-dataset', 128, cut=True)
-        self.fixedfix = getTestImages(
-            '../../fixed' if onServer else '/Users/oscar/Downloads/test-dataset', 128)
+        self.testpath = tpath
+        self.fixedfix = getTestImages(os.path.join(self.testpath), self.imgsize)
 
         self.fixedlen = len(self.fixedImgs) + len(self.fixedfix)
 
-        self.E = Encoder(
-            path='../../prevgg/vgg.pth' if onServer else '/Users/oscar/Downloads/vgg/vgg.pth').to(
+        self.vggpath = vpath
+        self.E = Encoder(self.vggpath).to(
             device)
         self.D = Decoder().to(device)
         self.dis = Discriminator(self.attr).to(device)
         # mention that the attr is an 1-dim numpy
         self.I = Interp(self.attr_n + 1).to(device)
         self.P = KG().to(device)
-        self.Teacher = VGG(
-            path='../../prevgg/vgg.pth' if onServer else '/Users/oscar/Downloads/vgg/vgg.pth').to(
-            device)
+        self.Teacher = VGG(self.vggpath).to(device)
+
+        self.modelpath = mpath
 
         if toLoad:
             self.load_model()
-
-        
 
     def train(self):
         self._train(self.device)
@@ -67,6 +62,7 @@ class Program(object):
     def _train(self, device):
 
         wr = tensorboardX.SummaryWriter('./log', flush_secs=2)
+        self.dataset = CelebADataset(192000, self.datapath, self.imgsize, self.attrName)
 
         E_optim = optim.Adam(self.E.parameters(), lr=0.0001, betas=(0.5, 0.999))
         D_optim = optim.Adam(self.D.parameters(), lr=0.0001, betas=(0.5, 0.999))
@@ -219,28 +215,19 @@ class Program(object):
 
     def save_model(self):
         print('saving model...')
-        with open('mata.txt', 'w') as f:
-            print(self.total_step, file=f)
-        torch.save(self.E.state_dict(), "encoder.pth")
-        torch.save(self.D.state_dict(), "decoder.pth")
-        torch.save(self.dis.state_dict(), "Discriminator.pth")
-        torch.save(self.I.state_dict(), "Interp.pth")
-        torch.save(self.P.state_dict(), "KG.pth")
+        torch.save(self.E.state_dict(), self.modelpath + "/encoder.pth")
+        torch.save(self.D.state_dict(), self.modelpath + "/decoder.pth")
+        torch.save(self.dis.state_dict(), self.modelpath + "/Discriminator.pth")
+        torch.save(self.I.state_dict(), self.modelpath + "/Interp.pth")
+        torch.save(self.P.state_dict(), self.modelpath + "/KG.pth")
 
     def load_model(self):
         print('loading model...')
-        self.total_step = 160000
-        self.E.load_state_dict(torch.load("../../mdl/encoder.pth"))
-        self.D.load_state_dict(torch.load("../../mdl/decoder.pth"))
-        self.dis.load_state_dict(torch.load("../../mdl/Discriminator.pth"))
-        self.I.load_state_dict(torch.load("../../mdl/Interp.pth"))
-        self.P.load_state_dict(torch.load("../../mdl/KG.pth"))
-        with open('structure.txt', 'w') as f:
-            print(self.E, file=f)
-            print(self.D, file=f)
-            print(self.dis, file=f)
-            print(self.I, file=f)
-            print(self.P, file=f)
+        self.E.load_state_dict(torch.load(self.modelpath + "/encoder.pth"))
+        self.D.load_state_dict(torch.load(self.modelpath + "/decoder.pth"))
+        self.dis.load_state_dict(torch.load(self.modelpath + "/Discriminator.pth"))
+        self.I.load_state_dict(torch.load(self.modelpath + "/Interp.pth"))
+        self.P.load_state_dict(torch.load(self.modelpath + "/KG.pth"))
 
     def run(self, imageA, imageB, strength, flag=True):
         imageA = imageA.reshape((1, 3, self.imgsize, self.imgsize))
