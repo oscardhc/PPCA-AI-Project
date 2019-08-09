@@ -8,15 +8,18 @@ from PIL import Image
 from tqdm import tqdm
 import tensorboardX
 from model import *
+import json
 
 
 class Program(object):
 
-    def __init__(self, imgsize, device, attr, toLoad, batchsize, epo, batchpen, path, tpath, mpath, vpath):
+    def __init__(self, imgsize, device, attr, toLoad, batchsize, epo, ste, batchpen, path, tpath, mpath, vpath, ppath):
         super().__init__()
 
+        self.tmppath = ppath
         self.epoch = epo
-        self.step = ste
+        
+        self.total_step = ste
         self.batch_size = batchsize
 
         self.attrName = attr
@@ -31,19 +34,13 @@ class Program(object):
         self.batch_penalty = batchpen
         self.imgsize = imgsize
 
-        self.total_step = 0
-
         self.datapath = path
         self.device = device
 
         self.testpath = tpath
-        self.fixedfix = getTestImages(os.path.join(self.testpath), self.imgsize)
-
-        self.fixedlen = len(self.fixedImgs) + len(self.fixedfix)
 
         self.vggpath = vpath
-        self.E = Encoder(self.vggpath).to(
-            device)
+        self.E = Encoder(self.vggpath).to( device)
         self.D = Decoder().to(device)
         self.dis = Discriminator(self.attr).to(device)
         # mention that the attr is an 1-dim numpy
@@ -62,7 +59,10 @@ class Program(object):
     def _train(self, device):
 
         wr = tensorboardX.SummaryWriter('./log', flush_secs=2)
+        
         self.dataset = CelebADataset(192000, self.datapath, self.imgsize, self.attrName)
+        self.fixedfix = getTestImages(os.path.join(self.testpath), self.imgsize)
+        self.fixedlen = len(self.fixedfix)
 
         E_optim = optim.Adam(self.E.parameters(), lr=0.0001, betas=(0.5, 0.999))
         D_optim = optim.Adam(self.D.parameters(), lr=0.0001, betas=(0.5, 0.999))
@@ -75,7 +75,7 @@ class Program(object):
 
         full_strenth = torch.ones(self.batch_size, self.attr_n + 1).to(device)
         """load data there"""
-        dataset = DataLoader(self.dataset, batch_size=self.batch_size, shuffle=True, num_workers=16)
+        dataset = DataLoader(self.dataset, batch_size=self.batch_size, shuffle=True, num_workers=2)
 
         for ep in range(self.epoch):
             process = tqdm(total=(len(dataset)))
@@ -206,8 +206,23 @@ class Program(object):
                 self.total_step += 1
                 process.update(1)
                 process.set_description('[%d] D:%.3f DIS:%.3f VGG:%.3f EI:%.3f' % (
-                    ep, D_loss.item(), dis_loss.item(), vgg_loss.item(), EI_loss.item()))
+                    self.total_step, D_loss.item(), dis_loss.item(), vgg_loss.item(), EI_loss.item()))
 
+                if self.total_step % 10 == 0:
+                    with open(self.tmppath + 'train/output.json', "w") as f:
+                        output_json = {
+                            'output image': self.tmppath + 'train/res.jpg',
+                            'model path': self.modelpath,
+                            'total step': self.total_step,
+                            'D Loss': D_loss.item(),
+                            'DIS Loss': dis_loss.item(),
+                            'VGG Loss': vgg_loss.item(),
+                            'EI Loss': EI_loss.item()
+                        }
+                        json.dump(output_json, f)
+                        f.flush() # 中间结果更新时需要flush
+                
+                
                 wr.add_scalar('scalar/D', D_loss.item(), self.total_step)
                 wr.add_scalar('scalar/DIS', dis_loss.item(), self.total_step)
                 wr.add_scalar('scalar/VGG', vgg_loss.item(), self.total_step)
@@ -215,19 +230,21 @@ class Program(object):
 
     def save_model(self):
         print('saving model...')
-        torch.save(self.E.state_dict(), self.modelpath + "/encoder.pth")
-        torch.save(self.D.state_dict(), self.modelpath + "/decoder.pth")
-        torch.save(self.dis.state_dict(), self.modelpath + "/Discriminator.pth")
-        torch.save(self.I.state_dict(), self.modelpath + "/Interp.pth")
-        torch.save(self.P.state_dict(), self.modelpath + "/KG.pth")
+        with open(self.modelpath + "mata.txt", "w") as f:
+            print(self.total_step, file=f)
+        torch.save(self.E.state_dict(), self.modelpath + "encoder.pth")
+        torch.save(self.D.state_dict(), self.modelpath + "decoder.pth")
+        torch.save(self.dis.state_dict(), self.modelpath + "Discriminator.pth")
+        torch.save(self.I.state_dict(), self.modelpath + "Interp.pth")
+        torch.save(self.P.state_dict(), self.modelpath + "KG.pth")
 
     def load_model(self):
         print('loading model...')
-        self.E.load_state_dict(torch.load(self.modelpath + "/encoder.pth"))
-        self.D.load_state_dict(torch.load(self.modelpath + "/decoder.pth"))
-        self.dis.load_state_dict(torch.load(self.modelpath + "/Discriminator.pth"))
-        self.I.load_state_dict(torch.load(self.modelpath + "/Interp.pth"))
-        self.P.load_state_dict(torch.load(self.modelpath + "/KG.pth"))
+        self.E.load_state_dict(torch.load(self.modelpath + "encoder.pth"))
+        self.D.load_state_dict(torch.load(self.modelpath + "decoder.pth"))
+        self.dis.load_state_dict(torch.load(self.modelpath + "Discriminator.pth"))
+        self.I.load_state_dict(torch.load(self.modelpath + "Interp.pth"))
+        self.P.load_state_dict(torch.load(self.modelpath + "KG.pth"))
 
     def run(self, imageA, imageB, strength, flag=True):
         imageA = imageA.reshape((1, 3, self.imgsize, self.imgsize))
@@ -261,35 +278,17 @@ class Program(object):
                 tt.append(np.hstack(tmp))
         return tt
 
-    def showGIF(self, arr, prec):
-        """
-        :param prec: number of steps
-        :return:
-        """
-        tt = []
-        rg = len(arr) - 1
-        with torch.no_grad():
-            for i in range(rg):
-                ste = torch.zeros(1, self.attr_n + 1).to(self.device)
-                tmp = []
-                for j in range(self.attr_n + 1):
-                    for _k in range(1, 1 + prec):
-                        k = 1.0 * _k / prec
-                        ste[0][j] = k
-                        res = self.run(torch.tensor(arr[i]).float().to(self.device),
-                                       torch.tensor(arr[i + 1]).float().to(self.device),
-                                       ste)
-                        res.squeeze_()
-                        res = res.detach().cpu().numpy().transpose(1, 2, 0)
-                        tmp.append(res)
-
-        return tt
-
     def showResult(self):
-        random.shuffle(self.fixedImgs)
         tt = []
-        tt += self.showArray(self.fixedImgs[0:15])
         tt += self.showArray(self.fixedfix)
         ary = np.vstack(tt)
         img = Image.fromarray((ary * 255).astype('uint8'))
-        img.save('res-%06d.jpg' % self.total_step)
+        img.save(self.tmppath + 'train/res.jpg')
+        
+    def predict(self, pa, pb, ste):
+        im = getTestPair(pa, pb)
+        res = self.run(torch.tensor(im[0]).float().to(self.device), torch.tensor(im[1]).float().to(self.device), torch.tensor([ste]).float().to(self.device))
+        res.squeeze_()
+        res = res.detach().cpu().numpy().transpose(1, 2, 0)
+        img = Image.fromarray((res * 255).astype('uint8'))
+        return img

@@ -149,6 +149,9 @@ class VGG(nn.Module):
             ('relu5_1', nn.ReLU(inplace=True))
         ]))
         self.model = nn.Sequential(model)
+        
+        if path == '':
+            return
 
         sdict = torch.load(path)
         mdict = self.state_dict()

@@ -70,7 +70,6 @@ class CelebADataset(torch.utils.data.Dataset):
 
 def getTestImages(path, size=128, cut=False):
     files = sorted(glob.glob((path + '/*.*')))
-    print(path, files)
     ret = []
     for file in files:
         img = Image.open(file)
@@ -80,6 +79,15 @@ def getTestImages(path, size=128, cut=False):
             bbb = W // 4
             img = img.crop((bbb * 2 // 3, bbb // 4, W - bbb, W - bbb))
 
+        img = img.resize((size, size), Image.ANTIALIAS)
+        ret += [(np.array(img) / 255.0).transpose(2, 0, 1)]
+    return ret
+
+def getTestPair(pathA, pathB, size=128):
+    files = [pathA, pathB]
+    ret = []
+    for file in files:
+        img = Image.open(file)
         img = img.resize((size, size), Image.ANTIALIAS)
         ret += [(np.array(img) / 255.0).transpose(2, 0, 1)]
     return ret
