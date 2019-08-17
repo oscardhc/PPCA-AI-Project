@@ -47,6 +47,7 @@ class Program(object):
         self.I = Interp(self.attr_n + 1).to(device)
         self.P = KG().to(device)
         self.Teacher = VGG(self.vggpath).to(device)
+        self.imdis = Image_Dis().to(device)
 
         self.modelpath = mpath
 
@@ -64,11 +65,13 @@ class Program(object):
         self.fixedfix = getTestImages(os.path.join(self.testpath), self.imgsize)
         self.fixedlen = len(self.fixedfix)
 
-        E_optim = optim.Adam(self.E.parameters(), lr=0.0001, betas=(0.5, 0.999))
-        D_optim = optim.Adam(self.D.parameters(), lr=0.0001, betas=(0.5, 0.999))
-        dis_optim = optim.Adam(self.dis.parameters(), lr=0.0001, betas=(0.5, 0.999))
-        I_optim = optim.Adam(self.I.parameters(), lr=0.0001, betas=(0.5, 0.999))
-        P_optim = optim.Adam(self.P.parameters(), lr=0.0001, betas=(0.5, 0.999))
+        E_optim = optim.Adam(self.E.parameters(), lr=0.0001)
+        D_optim = optim.Adam(self.D.parameters(), lr=0.0001)
+        dis_optim = optim.Adam(self.dis.parameters(), lr=0.0001)
+        I_optim = optim.Adam(self.I.parameters(), lr=0.0001)
+        P_optim = optim.Adam(self.P.parameters(), lr=0.0001)
+        Im_dis_optim = optim.Adam(self.P.parameters(), lr=0.0002)
+        # cautious! betas=(0.5, 0.999) can easily lead to overfitting
 
         MSE_criterion = nn.MSELoss().to(device)
         BCE_criterion = nn.BCEWithLogitsLoss().to(device)
@@ -156,6 +159,38 @@ class Program(object):
                 I_optim.zero_grad()
                 P_optim.zero_grad()
 
+                outimg = self.D(interp_F)
+                imgJudge = self.imdis(outimg)
+                imgJudge_dis = self.imdis(outimg.detach())
+                isreal = torch.ones_like(imgJudge).to(device)
+                isfalse = torch.zeros_like(imgJudge).to(device)
+                realImgJudge = self.imdis(images)
+
+                img_real_loss = MSE_criterion(imgJudge_dis, isfalse).mean()
+                img_real_loss.backward(retain_graph=True)
+                img_rr_loss = MSE_criterion(realImgJudge, isreal).mean()
+                img_rr_loss.backward(retain_graph=True)
+                Im_dis_optim.step()
+
+                E_optim.zero_grad()
+                D_optim.zero_grad()
+                dis_optim.zero_grad()
+                I_optim.zero_grad()
+                P_optim.zero_grad()
+
+                im_false_loss = MSE_criterion(imgJudge, isreal).mean()
+                img_real_loss.backward()
+                if t % self.batch_penalty == 0:
+                    I_optim.step()
+                    E_optim.step()
+                D_optim.step()
+
+                E_optim.zero_grad()
+                D_optim.zero_grad()
+                dis_optim.zero_grad()
+                I_optim.zero_grad()
+                P_optim.zero_grad()
+
                 vgg_feat = self.Teacher(images).detach()
                 vgg_loss = MSE_criterion(vgg_feat, self.P(real_F.detach()))
                 vgg_loss.backward()
@@ -175,7 +210,7 @@ class Program(object):
                     cl_loss = 0
                     tmp_interp_attr = [att.detach() for att in interp_attr]
                     for interp_att, homo_att in zip(tmp_interp_attr, interp_homo_attr):
-                        cl_loss += BCE_criterion(homo_att, interp_att) / (homo_att.size(1) * homo_att.size(0))
+                        cl_loss += BCE_criterion(homo_att, interp_att) / (homo_att.size(0))
                     EI_loss += cl_loss
                     """calculate the classification loss above"""
                     total_interp_F = self.I(real_F.detach(), perm_F.detach(), full_strenth)
@@ -185,6 +220,8 @@ class Program(object):
                     EI_loss += MSE_criterion(EI_real_dec, images.detach())
                     """calculate the reconstruction loss above"""
                     EI_vgg_feat = self.Teacher(images).detach()
+                    # this one is supposed to be only pass throw first few layers instead of the whole VGG, 
+                    # otherwise, it is easy to cause overfitting.
                     EI_vgg_loss = MSE_criterion(EI_vgg_feat, self.P(real_F))
                     EI_loss += EI_vgg_loss
                     """calculate the homomorphic gap above"""

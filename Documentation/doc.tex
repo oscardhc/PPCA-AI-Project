@@ -169,38 +169,38 @@
 
 \subsubsection{误差逆传播与梯度下降}
 
-如何对神经网络中繁多的参数进行更新呢？目前常用的方法被称为误差逆传播算法，常用于多层前馈神经网络。一个简单的神经网络如上图所示，包含输入层、隐藏层和输出层。假设输入层共有d个结点，用$\MC x_1,x_2...x_d$，隐层上共有q个结点，编号为$\MC b_1,b_2...b_q$，其阈值为$\gamma_1,\gamma_2...\gamma_q$。输出层共有l个结点，依次为$\MC y_1,y_2...y_l$，其阈值为$\theta_1,\theta_2...\theta_l$。不失一般性，假设每一层都是全连接层，激活函数为Sigmoid函数。
+如何对神经网络中繁多的参数进行更新呢？目前常用的方法被称为误差逆传播算法，常用于多层前馈神经网络。一个简单的神经网络如上图所示，包含输入层、隐藏层和输出层。假设输入层共有d个结点，用$x_1,x_2...x_d$，隐层上共有q个结点，编号为$b_1,b_2...b_q$，其阈值为$\gamma_1,\gamma_2...\gamma_q$。输出层共有l个结点，依次为$y_1,y_2...y_l$，其阈值为$\theta_1,\theta_2...\theta_l$。不失一般性，假设每一层都是全连接层，激活函数为Sigmoid函数。
 
-为了方便书写，假设输入层至隐层的连接权为$\MC v_{\MC ij}, i=1,2...d j=1,2...q$，隐层至输出层的连接权为$\MC w_{\MC ij}, i=1,2...q j=1,2...l$，且假设隐层的输入为$\alpha_i i=1,2,...q$，输出层的输入为$\beta_i i=1,2,...l$。
+为了方便书写，假设输入层至隐层的连接权为$v_{ij}, i=1,2...d j=1,2...q$，隐层至输出层的连接权为$w_{ij}, i=1,2...q j=1,2...l$，且假设隐层的输入为$\alpha_i i=1,2,...q$，输出层的输入为$\beta_i i=1,2,...l$。
 
-对于一个训练例$(\MC x_{k},\MC y_{k})$，神经网络的输出为$\hat{\MC y_{k}}=(\hat{\MC y_1^k},\hat{\MC y_2^k}...\hat{\MC y_l^k})}$。则网络的均方误差为
+对于一个训练例$(x_{k},y_{k})$，神经网络的输出为$\hat{y_{k}}=(\hat{y_1^k},\hat{y_2^k}...\hat{y_l^k})}$。则网络的均方误差为
 
-$$\mathrm E_{k}=\frac{1}{2}\sum_{j=1}^{l}{\hat{(\MC y_j^k}-\MC y_j^k)^2}$$
+$$\mathrm E_{k}=\frac{1}{2}\sum_{j=1}^{l}{\hat{(y_j^k}-y_j^k)^2}$$
 
-任意参数$\MC v$的更新估计式为：
-$\MC v \leftarrow \MC v + \Delta\MC v$
+任意参数$v$的更新估计式为：
+$v \leftarrow v + \Delta v$
 
-下面以隐层到输出层的连接权$\MC w_{\MC hj}$为例描述这一算法：
+下面以隐层到输出层的连接权$w_{hj}$为例描述这一算法：
 
 BP算法基于梯度下降策略，以目标的负梯度方向对参数进行调整。对于一个给定的学习率$\eta$（用于衡量每次梯度下降的程度，在0至1之间），有
 
-$$\Delta\MC w_{\MC hj}=-\eta\frac{\partial\mathrm E_{k}}{\partial\MC w_{\MC hj}}$$
+$$\Delta w_{hj}=-\eta\frac{\partial\mathrm E_{k}}{\partial w_{hj}}$$
 
-注意到$\MC w_{\MC hj}$先影响道第$\MC j$个输出层神经元的输入值$\beta_{j}$，再影响到其输出值$\hat{\MC y_{j}^{k}}$，然后影响到$\mathrm E_{k}$，有
+注意到$w_{hj}$先影响道第$j$个输出层神经元的输入值$\beta_{j}$，再影响到其输出值$\hat{y_{j}^{k}}$，然后影响到$\mathrm E_{k}$，有
 
-$\frac{\partial\mathrm E_{k}}{\partial\MC w_{\MC hj}}=\frac{\partial\mathrm E_k}{\partial\hat{\MC y_{j}^{k}}}\cdot\frac{\partial\hat{\MC y_{j}^{k}}}{\partial\beta_{j}}\cdot\frac{\partial\beta_{j}}{\partial\MC w_{\MC hj}}$
+$\frac{\partial\mathrm E_{k}}{\partial w_{hj}}=\frac{\partial\mathrm E_k}{\partial\hat{y_{j}^{k}}}\cdot\frac{\partial\hat{y_{j}^{k}}}{\partial\beta_{j}}\cdot\frac{\partial\beta_{j}}{\partial w_{hj}}$
 
-由定义有$\frac{\partial\beta_{j}}{\partial\MC w_{\MC hj}}=\MC b_{h}$
+由定义有$\frac{\partial\beta_{j}}{\partial w_{hj}}=b_{h}$
 
 Sigmoid函数在任意位置的导数均存在且可以被解出（其余连续的激活函数均满足这一要求）。有
 
-$$\MC g_{j}=-\frac{\partial\mathrm E_{k}}{\partial\hat{\MC y_{j}^{k}}}\cdot\frac{\partial\hat{\MC y_{j}^{k}}}{\partial\beta_{j}}=-(\hat{\MC y_{j}^{k}}-\MC y_{j}^{k})\cdot\MC f'(\beta_{j}-\theta_{j})$$
+$$g_{j}=-\frac{\partial\mathrm E_{k}}{\partial\hat{y_{j}^{k}}}\cdot\frac{\partial\hat{y_{j}^{k}}}{\partial\beta_{j}}=-(\hat{y_{j}^{k}}-y_{j}^{k})\cdot f'(\beta_{j}-\theta_{j})$$
 
-则$\MC w_{\MC hj}$的更新公式为$$\Delta\MC w_{\MC hj} = \eta\MC g_j\MC b_h$$
+则$w_{hj}$的更新公式为$$\Delta w_{hj} = \eta g_jb_h$$
 
 \subsubsection{GAN}
 
-GAN（生成式对抗网络）当中，两个神经网络相互竞争，生成网络从隐空间中随机取样作为输入，其输出结果需要尽量模仿训练集中的真实样本。判别网络的输入则为真实样本或生成网络的输出，其目的是将生成网络的输出从真实样本中尽可能分辨出来。而生成网络则要尽可能地欺骗判别网络。两个网络相互对抗、不断调整参数，最终目的是使判别网络无法判断生成网络的输出结果是否真实。进一步细分，生成网络还可以分为三部分：提取特征（Encode），中间过程和翻译特征（Decode）。
+GAN（生成式对抗网络）当中，两个神经网络相互竞争，生成网络从隐空间中随机取样作为输入，其输出结果需要尽量模仿训练集中的真实样本。判别网络的输入则为真实样本或生成网络的输出，其目的是将生成网络的输出从真实样本中尽可能分辨出来。而生成网络则要尽可能地欺骗判别网络。两个网络相互对抗、不断调整参数，最终目的是使判别网络无法判断生成网络的输出结果是否真实。进一步细分，生成网络还可以分为三部分：提取特征（Encoder），中间过程和翻译特征（Decoder）。
 
 \section{最初的尝试：直接使用插值}
 
@@ -283,7 +283,7 @@ U-net模型中的网络是对称的结构，将第i层的输出加入到倒数�
 
 \subsection{为什么需要同态？}
 
-将生成网络细分为三个部分：提取特征、中间过程和翻译特征。只要我们能在提取特征后数据所在的隐空间里找到一个有效、连续的插值，上面的CycleGAN的问题就得到了解决。
+将生成网络细分为三个部分：提取特征（Encoder）、中间过程和翻译特征（Decoder）。只要我们能在提取特征后数据所在的隐空间里找到一个有效、连续的插值，上面的CycleGAN的问题就得到了解决。
 
 在实践中我们发现，如果在隐空间上作均匀的线性变化，对应图像上特定属性的变化并不均匀。相反，它往往在某一段区间上突变。如下图所示，我们希望将人脸的笑容隐去，并控制其间笑容逐渐淡化的程度（如第二行所示），但此前的方法并不能完成我们的目标（如第一行所示），图片在c与d之间有较大的变化，却在其余部分几乎不变。
 
@@ -298,7 +298,7 @@ U-net模型中的网络是对称的结构，将第i层的输出加入到倒数�
 
 \subsection{如何实现同态？}
 
-在神经网络中，生成器被分为三个部分：提取特征、插值、翻译特征。其中提取特征与翻译特征的过程，相当于实现图片与隐空间之间的相互映射。插值部分包括了多个并列的神经网络，每一个网络对应了一个有现实意义的属性。插值的最终结果等于每个神经网络结果的加和。由于插值结果与现实属性是同态的，而现实中属性的过渡可以用线性的变换，故可以直接对插值结果均匀变换，来调整某个属性的变化程度。
+在神经网络中，生成器被分为三个部分：提取特征（Encoder）、插值、翻译特征（Decoder）。其中Encoder与Decoder的过程，相当于实现图片与隐空间之间的相互映射。插值部分包括了多个并列的神经网络，每一个网络对应了一个有现实意义的属性。插值的最终结果等于每个神经网络结果的加和。由于插值结果与现实属性是同态的，而现实中属性的过渡可以用线性的变换，故可以直接对插值结果均匀变换，来调整某个属性的变化程度。
 
 为了校正用于插值的网络，需要额外引入一个网络$\MC A'(\cdot)$ ，其作用是拟合得到一个函数，可以将插值结果映射至现实属性，从而得到对应的误差。
 
@@ -306,75 +306,76 @@ U-net模型中的网络是对称的结构，将第i层的输出加入到倒数�
 
 \begin{figure}[htbp]
 	\centering
-	\includegraphics[width=0.8\textwidth]{assets/mdl}
+	\includegraphics[width=1.0\textwidth]{assets/mdl}
 	\caption{}
 \end{figure}
 
-训练时，读入两组图片$\mathrm Im_a$、$\mathrm Im_b$和它们自身的一些属性$\mathrm z_a$、$\mathrm z_b$。图片首先通过提取特征的网络$\MC E$，得到对应的特征矩阵(将起始图片和目标图片的特征分别记为$\mathrm f_a$和$\mathrm f_b$)。
+训练时，读入两组图片$\mathrm Im_a$、$\mathrm Im_b$和它们自身的一些属性$\mathrm z_a$、$\mathrm z_b$。图片首先通过Encoder网络$\MC E$，得到对应的特征矩阵(将起始图片和目标图片的特征分别记为$\mathrm f_a$和$\mathrm f_b$)。
 
-接下来我们将两个特征矩阵通过插值器$\MC I$进行插值，得到$\mathrm F_{\MC interp}$。插值器是一组结构相同的神经网络，插值的方法如下：
+接下来我们将两个特征矩阵通过插值器$\MC I$进行插值，得到$\mathrm F_{interp}$。插值器是一组结构相同的神经网络，插值的方法如下：
 
-$$\mathrm F_{\MC interp} = \mathrm F_a + \sum_{i=1}^{c}{\MC v_i \cdot \MC T_i(\mathrm F_b - \mathrm F_a)}$$
+$$\mathrm F_{interp} = \mathrm F_a + \sum_{i=1}^{c}{v_i \cdot \MC T_i(\mathrm F_b - \mathrm F_a)}$$
 
-其中，$\MC T_i$代表第$\mathrm i$个属性的插值函数，是一个简单的神经网络，$\MC v_i$代表了第$\mathrm i$个属性的变化程度，在0和1之间，越靠近0，表示这一属性的变化程度越小。这一插值的原理还会在下文中插值部分进一步解释。
+其中，$\MC T_i$代表第$\mathrm i$个属性的插值函数，是一个简单的神经网络，$v_i$代表了第$\mathrm i$个属性的变化程度，在0和1之间，越靠近0，表示这一属性的变化程度越小。这一插值的原理还会在下文中插值部分进一步解释。
 
-在插值后，我们将得到的特征$\mathrm F_{\MC interp}$通过另一个神经网络$\MC D$来实现翻译特征的过程，以得到最终的图片。
+在插值后，我们将得到的特征$\mathrm F_{interp}$通过另一个神经网络$\MC D$来实现翻译特征（Decoder）的过程，以得到最终的图片。
 
 为了对每一个神经网络的参数进行更新，还额外引入了一些训练中的过程：
 
 首先，生成的内容需要通过一个神经网络$\MC Dis$进行鉴别，我们采用了WGAN，但鉴别的对象并不是生成的图片，而是插值得到的特征$\hat{\mathrm F}$。（这一特征会与图片中直接提取出的特征$\mathrm F$进行比较）为了让训练更稳定，还使用了梯度惩罚。
 
-$$\min_{\MC Dis} \MC L_{\mathrm GAN_{\MC Dis}} = \mathbb E_{\mathbb P_{\MC interp}}[\MC Dis(\hat{\mathrm F})] - \mathbb E_{\mathbb P_{\MC real}}[\MC Dis(\mathrm F)] + \lambda_{\MC gp}\MC L_{\MC gp}    (4.1)$$
+$$\min_{\MC Dis} \MC L_{\mathrm GAN_{\MC Dis}} = \mathbb E_{\mathbb P_{interp}}[\MC Dis(\hat{\mathrm F})] - \mathbb E_{\mathbb P_{real}}[\MC Dis(\mathrm F)] + \lambda_{gp}\MC L_{gp}    (4.1)$$
 
-$$\min_{\MC E,I} \MC L_{\mathrm GAN_{\MC E,I}} = \mathbb E_{\mathbb P_{\MC real}}[\MC Dis(\mathrm F)] - \mathbb E_{\mathbb P_{\MC interp}}[\MC Dis(\hat{\mathrm F})]    (4.2)$$
+$$\min_{\MC E,I} \MC L_{\mathrm GAN_{\MC E,I}} = \mathbb E_{\mathbb P_{real}}[\MC Dis(\mathrm F)] - \mathbb E_{\mathbb P_{interp}}[\MC Dis(\hat{\mathrm F})]    (4.2)$$
 
 神经网络$\MC Dis$的参数也通过这一距离来更新，体现了网络中对抗的成分。
 
-对于生成器中提取和翻译特征的部分$\MC E$、$\MC D$，额外增加一个步骤来更新其参数：将提取出的特征不通过插值器，直接进行翻译。得到的图片与原图的差距即可被用于更新这两个网络的参数。实践表明，计算距离时直接将两张图片各像素点的RGB值相减的效果较差，因此，我们引入一个已训练好的、在判别图片差距这一模型上表现优秀的网络VGG来计算两张图片的差距：
+对于生成器中Encoder和Decoder部分$\MC E$、$\MC D$，额外增加一个步骤来更新其参数：将Encoder的结果不通过插值器，直接输入Decoder生成图片。得到的图片与原图的差距即可被用于更新这两个网络的参数。实践表明，计算距离时直接将两张图片各像素点的RGB值相减的效果较差，因此，我们引入一个已训练好的、在判别图片差距这一模型上表现优秀的网络VGG来计算两张图片的差距：
 
 $$\min_{\MC D} \MC L_{\MC D} = \mathbb E(||\Phi_3(\MC D(\mathrm F)) - \Phi_3(\MC Im)||^2)    (4.3)$$
 
-$$\min_{\MC E} \MC L_{\MC recon} = \mathbb E(||\Phi_3(\MC D(\mathrm F)) - \Phi_3(\MC Im)||^2)    (4.4)$$
+$$\min_{\MC E} \MC L_{recon} = \mathbb E(||\Phi_3(\MC D(\mathrm F)) - \Phi_3(\MC Im)||^2)    (4.4)$$
 
-VGG网络给出图片之间差距的方法实质上是通过卷积提取各个局部的特征，从而对图片的每个小块的距离进行比较。这一原理与提取特征的$\MC E$的目标很相似。因此，我们可以用VGG中更深层的部分来更新$\MC E$的参数：
+VGG网络给出图片之间差距的方法实质上是通过卷积提取各个局部的特征，从而对图片的每个小块的距离进行比较。这一原理与$\MC E$的目标很相似。因此，我们可以用VGG中更深层的部分来更新$\MC E$的参数：
 
-$$\min_{\MC E,I} \MC L_{\mathrm KG} = \mathbb E_{\mathbb P_{\MC real}}||\MC P[\MC E(\mathrm Im)] - \Phi_5(\mathrm Im)||^2    (4.5)$$
+$$\min_{\MC E,I} \MC L_{\mathrm KG} = \mathbb E_{\mathbb P_{real}}||\MC P[\MC E(\mathrm Im)] - \Phi_5(\mathrm Im)||^2    (4.5)$$
 
 其中，网络$\MC P$只含有一个卷积核大小为$1*1$的卷积层，目的仅在于让两个被比较对象的形状相同。
 
 现在，除了插值以外的两个部分的参数可以得到充分的更新了。$\MC D$的更新如公式4.3所示，$\MC E$的更新通过以下公式：
 
-$$\MC L_{\MC E} = \lambda_{\mathrm GAN_{\MC E}}\MC L_{\mathrm GAN_{\MC E,I}} + \lambda_{\MC recon}\MC L_{\MC recon} + \lambda_{\mathrm KG}L_{\mathrm KG}    (4.6)$$
+$$\MC L_{\MC E} = \lambda_{\mathrm GAN_{\MC E}}\MC L_{\mathrm GAN_{\MC E,I}} + \lambda_{recon}\MC L_{recon} + \lambda_{\mathrm KG}L_{\mathrm KG}    (4.6)$$
 
 过程中引入的网络$\MC Dis$、$\MC P$的更新分别通过公式4.1与4.5所示。
 
 现在我们来看插值的部分。正如上文所述，我们引入了一个网络$\MC A'(\cdot)$，模拟从插值得到的矩阵$\MC T(\mathrm F_b - \mathrm F_a)$到属性$\mathrm z$（与图片一同读入，随插值改变）的同态。注意$\MC T$实际上是一组网络$\MC T_1...T_c$。对两张图片的属性，可以直接使用线性插值，即
 
-$$\mathrm z_{\MC interp} = \mathrm z_a + \sum_{i=1}^{c}{\MC v_i \cdot (\mathrm z_b - \mathrm z_a)}$$
+$$\mathrm z_{interp} = \mathrm z_a + \sum_{i=1}^{c}{v_i \cdot (\mathrm z_b - \mathrm z_a)}$$
 
 上文中，两个特征的差通过插值器后得到的矩阵可以直接与代表插值程度的系数相乘，正是由于插值器得到矩阵与属性的同态，和属性可以进行上述线性插值。通过这一同态，我们可以更新插值网络的参数了：
 
-$$\min_ {\MC I} \MC L_{\mathrm F_{hom}} = \mathbb E [-\mathrm z_{\MC interp}\log(\MC A'(\mathrm F_{\MC interp}))]    (4.7)$$
+$$\min_ {\MC I} \MC L_{\mathrm F_{hom}} = \mathbb E [-\mathrm z_{interp}\log(\MC A'(\mathrm F_{interp}))]    (4.7)$$
 
 网络$\MC A'(\cdot)$的误差（被称为同态差距）也可以通过类似的方式更新：
 
-$$\min_ {\MC A'(\cdot)} \MC L_{\MC A'(\cdot)} = \mathbb E [-\mathrm z_a\log(\MC A'(\mathrm F_{\MC interp}))]    (4.8)$$
+$$\min_ {\MC A'(\cdot)} \MC L_{\MC A'(\cdot)} = \mathbb E [-\mathrm z_a\log(\MC A'(\mathrm F_{interp}))]    (4.8)$$
 
 尽管将$\mathrm z_a$与$\MC A'(\mathrm F_a)$比较更符合逻辑，但实际实践中，这会让插值器效果变差，因此其意义被改为让插值器尽量减少变化的内容，从而让修改特定属性的插值器不改变其余内容。
 
 此外，还可以将插值强度设为最高，即令插值器将$\mathrm F_a$彻底转换为$\mathrm F_b$，然后用插值结果与$\mathrm F_b$比较，也可以用于更新插值器:
 
-$$\MC L_{\MC I_{\MC total}} = ||\mathrm F_{\MC interp,v=1} - \mathrm F_b||^2$$
+$$\MC L_{\MC I_{total}} = ||\mathrm F_{interp,v=1} - \mathrm F_b||^2$$
 
 综上所述，插值过程的参数更新为：
 
-$$\MC L_{\MC I} = \lambda_{\mathrm GAN_{\MC I}}\MC L_{\mathrm GAN_{\MC E,I}} + \lambda_{\MC I_{\MC hom}}\MC L_{\mathrm F_{\MC hom}} + \lambda_{\MC I_{\MC total}}\MC L_{\MC I_{\MC total}}    (4.9)$$
+$$\MC L_{\MC I} = \lambda_{\mathrm GAN_{\MC I}}\MC L_{\mathrm GAN_{\MC E,I}} + \lambda_{\MC I_{hom}}\MC L_{\mathrm F_{hom}} + \lambda_{\MC I_{total}}\MC L_{\MC I_{total}}    (4.9)$$
 
 过程中引入的网络$\MC A'(\cdot)$的更新方法如公式4.8所示。
 
 \subsection{其它技巧}
 
-注意到训练的主要目标是获得一个较好的插值函数，因此我们的判别器被用于判定插值的结果，而非翻译特征后输出的图片。而$\MC A'(\cdot)$同样是用于计算插值后结果与目标属性之间误差的交叉熵。因此，这两个网络具有一定的相似性。为了加快模型的训练速度，我们令$\MC A'(\cdot)$与$\MC Dis$的前几层共用，只在最后一层有所区别。
+注意到训练的主要目标是获得一个较好的插值函数，因此我们的判别器被用于判定插值的结果，而非这个结果输入Decoder后输出的图片。而$\MC A'(\cdot)$同样是用于计算插值后结果与目标属性之间误差的交叉熵。因此，这两个网络具有一定的相似性。为了加快模型的训练速度，我们令$\MC A'(\cdot)$与$\MC Dis$的前几层共用，只在最后一层有所区别。
+
 \subsection{实现细节}
 
 我们在论文的基础上，新增加了一些分组，以下9组条件更为全面描述了人脸的特征：
@@ -399,38 +400,33 @@ $$\MC L_{\MC I} = \lambda_{\mathrm GAN_{\MC I}}\MC L_{\mathrm GAN_{\MC E,I}} + \
 
 \subsection{最终成果}
 
-下图展示了模型的最终成果，从左上角图片到右下角图片实现了人像的过渡变换。
+下图展示了模型的最终成果，从左侧图片到右侧图片实现了人脸的转换，其中转换的对象依次为表情、性别、头发颜色、头发形状、年龄和其它信息，其中左起第一列图片是原图，第二列是不经过插值后直接重建（encoder-decoder）的图片，第三列起每两列是一种属性的转换，转换强度分别为0.5、1。最后一列是目标图像。
 
+\newpage
 \begin{figure}[htbp]
 	\centering
-	\includegraphics[width=0.8\textwidth]{assets/11}
-	\includegraphics[width=0.8\textwidth]{assets/11-2}
+	\includegraphics[width=1.0\textwidth]{assets/11}
 	\caption{}
 \end{figure}
 
-\begin{figure}[htbp]
-	\centering
-	\includegraphics[width=0.8\textwidth]{assets/12}
-	\includegraphics[width=0.8\textwidth]{assets/12-2}
-	\caption{}
-\end{figure}
-
-下图中，左侧图片为原图，右侧图片为经过模型但不改变任何参数的结果图片，可以看出Encoder-Decoder可以较为细致地还原出原图。
+下图则更细致地对单一属性的转换给出了结果：（所选属性为表情）
 
 \begin{figure}[htbp]
 	\centering
-	\includegraphics[width=0.6\textwidth]{assets/13}
+	\includegraphics[width=1.0\textwidth]{assets/12}
 	\caption{}
 \end{figure}
 
 \subsection{问题与改进}
 
-在训练过程中，我们向测试集中加入了一些额外的图片，发现在训练相同时间时的效果远弱于数据集中自带的测试集。我们认为，这是由于数据集中的头像位置几乎重合，因此我们加入的图片即使稍有位置的差异，也会造成效果不佳的问题。于是我们在训练过程中，手动为图像增加了位置的变化等干扰。
+在训练过程中，我们向测试集中加入了一些额外的图片，发现在训练相同时间时的效果远弱于数据集中自带的测试集。我们认为这是由于数据集中的头像位置几乎重合，因此我们加入的图片即使稍有位置的差异，也会造成效果不佳的问题。于是我们在训练过程中，手动为图像增加了位置的变化等干扰。
 
 此外，人脸及其表情本身具有较好的连续性，但很多数据集并没有这一优势。因此，当我们将这一模型应用于一些图像变化连续性弱的领域时，得到的结果并不令人满意，这是这一网络没有考虑到的问题。
 
-最终训练得到的模型中，输入图片背景为白色时，输出图片背景会变灰。我们认为这可能是由于网络的层次过深，导致提取与翻译特征中每个点都与整张图片中大部分都相关，从而让原本为白色的部分也受到了其余位置的颜色的影响。
+最终训练得到的模型中，输入图片背景为白色时，输出图片背景会变灰。我们认为这可能是由于网络的层次过深，导致Encoder与Decoder中每个点都与整张图片中大部分都相关，从而让原本为白色的部分也受到了其余位置的颜色的影响。
 
-\section{总结}
+这个问题的另一个思路是额外增加一个attribute，称其为other attributes。它只在插值过程中发挥作用，并不在计算loss与验证时发挥作用，且起始图片的值为0，目标图片的值为1。
+
+在最初训练的结果中，我们的效果很差。因此，我们对原文的方法进行了改进：训练过程中，通过decoder生成的图片会通过另一个discriminator，以patchGAN的方法（即在判断图片是否为真时，将图片分割为若干区域，每个区域单独通过判别器网络，最后得到一个较小的张量，表示各个区域是否为真）判断该图是否为真实图片并进行更新。此外，我们修改了学习率衰减的参数（减缓了衰减），终于得到了上图所示的较好的结果。
 
 \end{document}

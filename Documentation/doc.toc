@@ -18,7 +18,6 @@
 \contentsline {subsection}{\numberline {4.1}为什么需要同态？}{12}{subsection.4.1}% 
 \contentsline {subsection}{\numberline {4.2}如何实现同态？}{13}{subsection.4.2}% 
 \contentsline {subsection}{\numberline {4.3}其它技巧}{16}{subsection.4.3}% 
-\contentsline {subsection}{\numberline {4.4}实现细节}{16}{subsection.4.4}% 
-\contentsline {subsection}{\numberline {4.5}最终成果}{16}{subsection.4.5}% 
-\contentsline {subsection}{\numberline {4.6}问题与改进}{17}{subsection.4.6}% 
-\contentsline {section}{\numberline {5}总结}{17}{section.5}% 
+\contentsline {subsection}{\numberline {4.4}实现细节}{17}{subsection.4.4}% 
+\contentsline {subsection}{\numberline {4.5}最终成果}{17}{subsection.4.5}% 
+\contentsline {subsection}{\numberline {4.6}问题与改进}{18}{subsection.4.6}% 
